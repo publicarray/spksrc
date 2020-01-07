@@ -9,3 +9,6 @@ toolchains/*/work*
 local.mk
 *.DS_Store
 *~
+spksrc.sublime-workspace
+.cargo
+.rustup
