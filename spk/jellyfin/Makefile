@@ -1,5 +1,5 @@
 SPK_NAME = jellyfin
-SPK_VERS = 10.5.2
+SPK_VERS = 10.5.5
 SPK_REV = 0
 SPK_ICON = src/jellyfin.png
 DSM_UI_DIR = app
