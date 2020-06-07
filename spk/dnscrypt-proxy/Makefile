@@ -52,3 +52,4 @@ dnscrypt_extra_install: copy_msg
 	cp -rf $(CURDIR)/src/$(DSM_UI_DIR)/* $(STAGING_DIR)/$(DSM_UI_DIR)/
 	@$(MSG) "UI - Compiling cgi"
 	env $(ENV) go build $(GO_BUILD_ARGS) -o $(STAGING_DIR)/$(DSM_UI_DIR)/index.cgi $(CURDIR)/src/$(DSM_UI_DIR)/cgi.go
+#
