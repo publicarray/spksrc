@@ -16,3 +16,4 @@ HOMEPAGE = http://www.imagemagick.org/
 LICENSE  = Apache 2.0
 
 include ../../mk/spksrc.spk.mk
+#
