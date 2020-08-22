@@ -199,18 +199,18 @@ func saveFile(fileKey string, data string) {
 	file.Chown(int(stat.Uid), int(stat.Gid))
 	file.Sync()
 
-	if fileKey == "config" {
-		checkConfFile(true)
-	}
+	// if fileKey == "config" {
+	// 	checkConfFile(true)
+	// }
 
 	err = os.Rename(rootDir+files[fileKey]+".tmp", rootDir+files[fileKey]) // atomic
 	if err != nil {
 		logError(err.Error())
 	}
 
-	if fileKey != "config" {
-		checkConfFile(false)
-	}
+	// if fileKey != "config" {
+	// 	checkConfFile(false)
+	// }
 
 	return
 }
@@ -222,7 +222,7 @@ func checkConfFile(yes bool) {
 		tmpExt = ".tmp"
 	}
 
-	cmd := exec.Command(rootDir+"/bin/dnscrypt-proxy", "-netprobe-timeout", "0", "-check", "-config", rootDir+files["config"]+tmpExt)
+	cmd := exec.Command(rootDir+"/bin/dnscrypt-proxy", "-check", "-config", rootDir+files["config"]+tmpExt)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		renderHTML("config", "", string(out)+err.Error())
