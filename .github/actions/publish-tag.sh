@@ -13,5 +13,4 @@ GH_PACKAGE=$(echo "$GITHUB_REF" | grep -oE "([0-9a-zA-Z]*-)*")
 GH_PACKAGE="${GH_PACKAGE:0:-1}"
 echo "$GH_PACKAGE"
 
-# use TCVERSION and ARCH parameters to get real exit code.
-make TCVERSION=${GH_ARCH##*-} ARCH=${GH_ARCH%%-*} -C spk/${GH_PACKAGE}
+make publish-all-supported -C spk/${GH_PACKAGE}

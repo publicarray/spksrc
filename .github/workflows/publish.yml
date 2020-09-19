@@ -1,0 +1,32 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "*-*"
+
+jobs:
+  build:
+    name: Publish
+    runs-on: ubuntu-latest
+    if: contains(github.ref, '[publish]')
+    steps:
+      - name: Cache toolchains
+        uses: actions/cache@v1
+        with:
+          path: toolchains
+          key: toolchains-v1
+          restore-keys: toolchains
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+            fetch-depth: 0
+            persist-credentials: false
+
+      - name: Publish Package (Tag)
+        uses: docker://synocommunity/spksrc:latest
+        with:
+          entrypoint: ./.github/actions/publish-tag.sh
+        env:
+          API_KEY: ${{ secrets.PUBLISH_API_KEY }}
