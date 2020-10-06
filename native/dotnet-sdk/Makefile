@@ -25,4 +25,4 @@ include ../../mk/spksrc.native-cc.mk
 dotnet-install:
 	mkdir -p $(HOME)/.dotnet/
 	$(RUN) cp -r ./* $(HOME)/.dotnet/
-	$(RUN) ln -s $(HOME)/.dotnet/dotnet $(INSTALL_PREFIX)/bin
+	$(RUN) ln -sf $(HOME)/.dotnet/dotnet $(INSTALL_PREFIX)/bin
