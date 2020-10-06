@@ -29,6 +29,7 @@ ADMIN_PORT = $(SERVICE_PORT)
 POST_STRIP_TARGET = jackett_extra_install
 
 REQUIRED_DSM = 5.0
+
 # no PPC/ARM5/x86 support for .net, see native/dotnet/Makefile for details
 UNSUPPORTED_ARCHS = $(PPC_ARCHES) $(ARM5_ARCHES) $(x86_ARCHES)
 
@@ -39,5 +40,3 @@ jackett_extra_install:
 	install -m 755 -d $(STAGING_DIR)/var
 	install -m 755 -d $(STAGING_DIR)/var/.config
 	install -m 755 -d $(STAGING_DIR)/var/.config/Jackett
-	install -m 755 -d $(STAGING_DIR)/app
-	install -m 644 src/app/config $(STAGING_DIR)/app/config
