@@ -29,7 +29,7 @@ ADMIN_PORT = $(SERVICE_PORT)
 POST_STRIP_TARGET = jackett_extra_install
 
 REQUIRED_DSM = 5.0
-# no PPC support for .net, see native/dotnet/Makefile for details
+# no PPC/ARM5/x86 support for .net, see native/dotnet/Makefile for details
 UNSUPPORTED_ARCHS = $(PPC_ARCHES) $(ARM5_ARCHES) $(x86_ARCHES)
 
 include ../../mk/spksrc.spk.mk
