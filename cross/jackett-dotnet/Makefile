@@ -34,6 +34,10 @@ ifeq ($(DOTNET_ARCH),)
 $(error Unsupported ARCH $(ARCH))
 endif
 
+SET_VERSION = /p:AssemblyVersion=$(PKG_VERS) /p:FileVersion=$(PKG_VERS) /p:InformationalVersion=$(PKG_VERS) /p:Version=$(PKG_VERS)
+NET_FRAMEWORK = netcoreapp3.1
+BUILD_ARGS = --self-contained -r linux-$(DOTNET_ARCH) -c Release --output="$(STAGING_INSTALL_PREFIX)/share/jackett"
+
 jackett_install:
 	mkdir -p $(STAGING_INSTALL_PREFIX)/share/$(PKG_DIR)
-	$(RUN) dotnet publish Jackett.Server -f netcoreapp3.1 --self-contained -r linux-$(DOTNET_ARCH) -c Release --output="$(STAGING_INSTALL_PREFIX)/share/jackett"
+	$(RUN) dotnet publish Jackett.Server -f $(NET_FRAMEWORK) $(BUILD_ARGS) $(SET_VERSION)
