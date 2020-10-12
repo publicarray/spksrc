@@ -58,4 +58,9 @@ endif
 ifeq ($(TC_VERS),6.2.2)
 TC_FIRMWARE = $(TC_VERS)-24922
 endif
+
+ifeq ($(TC_VERS),7.0)
+TC_FIRMWARE = $(TC_VERS)-4000
+endif
+
 endif
