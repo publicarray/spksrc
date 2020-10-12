@@ -84,7 +84,6 @@ $(WORK_DIR)/INFO:
 	$(create_target_dir)
 	@$(MSG) "Creating INFO file for $(SPK_NAME)"
 	@echo package=\"$(SPK_NAME)\" > $@
-	@echo thirdparty=\"yes\" >> $@
 	@echo version=\"$(SPK_VERS)-$(SPK_REV)\" >> $@
 	@/bin/echo -n "description=\"" >> $@
 	@/bin/echo -n "${DESCRIPTION}" | sed -e 's/\\//g' -e 's/"/\\"/g' >> $@
@@ -109,10 +108,14 @@ ifneq ($(strip $(FIRMWARE)),)
 else ifneq ($(strip $(OS_MIN_VER)),)
 	@echo os_min_ver=\"$(OS_MIN_VER)\" >> $@
 else ifneq ($(strip $(TC_FIRMWARE)),)
-	@echo firmware=\"$(TC_FIRMWARE)\" >> $@
+ifneq ($(shell expr "$(TCVERSION)" \>= 6.1),1)
+	@echo firmware=\"$(TC_FIRMWARE)\" >> $@  # depreciated
+endif
 	@echo os_min_ver=\"$(TC_FIRMWARE)\" >> $@
 else ifneq ($(strip $(TC_OS_MIN_VER)),)
-	@echo firmware=\"$(TC_OS_MIN_VER)\" >> $@
+ifneq ($(shell expr "$(TC_OS_MIN_VER)" \>= 6.1),1)
+	@echo firmware=\"$(TC_OS_MIN_VER)\" >> $@  # depreciated
+endif
 	@echo os_min_ver=\"$(TC_OS_MIN_VER)\" >> $@
 else
 	@echo firmware=\"3.1-1594\" >> $@
@@ -128,9 +131,9 @@ endif
 ifneq ($(strip $(HELPURL)),)
 	@echo helpurl=\"$(HELPURL)\" >> $@
 else
-  ifneq ($(strip $(HOMEPAGE)),)
+ifneq ($(strip $(HOMEPAGE)),)
 	@echo helpurl=\"$(HOMEPAGE)\" >> $@
-  endif
+endif
 endif
 ifneq ($(strip $(SUPPORTURL)),)
 	@echo support_url=\"$(SUPPORTURL)\" >> $@
@@ -144,13 +147,26 @@ endif
 ifneq ($(strip $(INSTUNINST_RESTART_SERVICES)),)
 	@echo instuninst_restart_services=\"$(INSTUNINST_RESTART_SERVICES)\" >> $@
 endif
-ifneq ($(strip $(RELOAD_UI)),)
+ifeq ($(RELOAD_UI),yes)
 	@echo reloadui=\"$(RELOAD_UI)\" >> $@
 endif
+
+ifneq ($(shell expr "$(TCVERSION)" \>= 7.0),1)
+# old behaviour
 ifeq ($(STARTABLE),no)
-	@echo startable=\"$(STARTABLE)\" >> $@
+	@echo startable=\"$(STARTABLE)\" >> $@ # depreciated
 	@echo ctl_stop=\"$(STARTABLE)\" >> $@
 endif
+else
+# since 7.0 use Synology resource acquisition
+ifeq ($(STARTABLE),no)
+ifeq ($(strip $(SPK_COMMANDS)),)
+# STARTABLE needs to be yes, Resource linking and unlinking works on start and stop
+	@echo ctl_stop=\"$(STARTABLE)\" >> $@
+endif
+endif
+endif
+
 	@echo displayname=\"$(DISPLAY_NAME)\" >> $@
 ifneq ($(strip $(DSM_UI_DIR)),)
 	@echo dsmuidir=\"$(DSM_UI_DIR)\" >> $@
