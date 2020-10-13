@@ -99,7 +99,7 @@ service_prestart () {
     # This fixes https://github.com/SynoCommunity/spksrc/issues/3468
     # This can't be done at install time. see:
     #  https://github.com/SynoCommunity/spksrc/blob/e914a32600e65f80131ae09913f1b6f6a2dd8b13/mk/spksrc.service.installer#L307-L319
-    chown root:root "${SYNOPKG_PKGDEST}/ui/index.cgi"
+    # chown root:root "${SYNOPKG_PKGDEST}/ui/index.cgi"
     forward_dns_dhcpd "yes"
     cd "$SVC_CWD" || exit 1
 
@@ -156,7 +156,7 @@ service_postinst () {
         ## change default settings
         sed -i -e "s/# server_names = .*/${server_names_enabled:-""}server_names = ${server_names}/" \
             -e "s/listen_addresses = .*/listen_addresses = ${listen_addresses}/" \
-            -e "s/# user_name = .*/user_name = '${EFF_USER:-"nobody"}'/" \
+            -e "s/# user_name = .*/# user_name = '${EFF_USER:-"nobody"}'/" \
             -e "s/require_dnssec = .*/require_dnssec = true/" \
             -e "s|# log_file = 'dnscrypt-proxy.log'.*|log_file = '${LOG_FILE:-""}'|" \
             -e "s/netprobe_timeout = .*/netprobe_timeout = 2/" \

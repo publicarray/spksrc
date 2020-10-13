@@ -19,7 +19,6 @@ STARTABLE = yes
 
 WIZARDS_DIR = src/wizard/
 DSM_UI_DIR = ui
-CONF_DIR = src/conf
 FWPORTS = src/${SPK_NAME}.sc
 SERVICE_USER = auto
 SERVICE_SETUP = src/service-setup.sh
