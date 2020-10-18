@@ -18,6 +18,7 @@ CHANGELOG = "Update to 2.0.44"
 STARTABLE = yes
 
 WIZARDS_DIR = src/wizard/
+CONF_DIR = src/conf
 DSM_UI_DIR = ui
 DSM_APP_NAME = SYNO.SDS.DNSCryptProxy.Application
 FWPORTS = src/${SPK_NAME}.sc

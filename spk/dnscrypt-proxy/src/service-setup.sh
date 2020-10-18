@@ -88,19 +88,20 @@ service_prestart () {
     echo "service_preinst ${SYNOPKG_PKG_STATUS}" >> "${INST_LOG}"
 
     # Install daily cron job (3 minutes past midnight), to update the block list
-    if [ "$OS" = 'dsm' ]; then
-        mkdir -p /etc/cron.d
-        echo "3       0       *       *       *       root    /var/packages/dnscrypt-proxy/target/var/update-blocklist.sh" >> /etc/cron.d/dnscrypt-proxy-update-blocklist
-    else # RSM
-        echo "3       0       *       *       *       root    /var/packages/dnscrypt-proxy/target/var/update-blocklist.sh" >> /etc/crontab
+    if [ "${SYNOPKG_DSM_VERSION_MAJOR}" -lt 7 ]; then
+        if [ "$OS" = 'dsm' ]; then
+            mkdir -p /etc/cron.d
+            echo "3       0       *       *       *       root    /var/packages/dnscrypt-proxy/target/var/update-blocklist.sh" >> /etc/cron.d/dnscrypt-proxy-update-blocklist
+        else # RSM
+            echo "3       0       *       *       *       root    /var/packages/dnscrypt-proxy/target/var/update-blocklist.sh" >> /etc/crontab
+        fi
+        synoservicectl --restart crond >> "${INST_LOG}"
+        # This fixes https://github.com/SynoCommunity/spksrc/issues/3468
+        # This can't be done at install time. see:
+        #  https://github.com/SynoCommunity/spksrc/blob/e914a32600e65f80131ae09913f1b6f6a2dd8b13/mk/spksrc.service.installer#L307-L319
+        # chown root:root "${SYNOPKG_PKGDEST}/ui/index.cgi"
+        forward_dns_dhcpd "yes"
     fi
-    synoservicectl --restart crond >> "${INST_LOG}"
-
-    # This fixes https://github.com/SynoCommunity/spksrc/issues/3468
-    # This can't be done at install time. see:
-    #  https://github.com/SynoCommunity/spksrc/blob/e914a32600e65f80131ae09913f1b6f6a2dd8b13/mk/spksrc.service.installer#L307-L319
-    # chown root:root "${SYNOPKG_PKGDEST}/ui/index.cgi"
-    forward_dns_dhcpd "yes"
     cd "$SVC_CWD" || exit 1
 
     # Limit num of processes https://golang.org/pkg/runtime/
@@ -118,8 +119,10 @@ service_prestart () {
 
 service_poststop () {
     echo "After stop (service_poststop)" >> "${INST_LOG}"
-    blocklist_cron_uninstall
-    forward_dns_dhcpd "no"
+    if [ "${SYNOPKG_DSM_VERSION_MAJOR}" -lt 7 ]; then
+        blocklist_cron_uninstall
+        forward_dns_dhcpd "no"
+    fi
 }
 
 service_postinst () {
@@ -128,6 +131,7 @@ service_postinst () {
     if [ ! -e "${CFG_FILE}" ]; then
         # shellcheck disable=SC2086
         cp -f ${EXAMPLE_FILES} "${SYNOPKG_PKGDEST}/var/" >> "${INST_LOG}" 2>&1
+        cp -n ${EXAMPLE_FILES} "${SYNOPKG_PKGDEST}/var/"
         cp -f "${SYNOPKG_PKGDEST}"/offline-cache/* "${SYNOPKG_PKGDEST}/var/" >> "${INST_LOG}" 2>&1
         cp -f "${SYNOPKG_PKGDEST}"/blocklist/* "${SYNOPKG_PKGDEST}/var/" >> "${INST_LOG}" 2>&1
         # shellcheck disable=SC2231
@@ -167,7 +171,7 @@ service_postinst () {
     echo "Fixing permissions for cgi GUI... " >> "${INST_LOG}"
     # Fixes https://github.com/publicarray/spksrc/issues/3
     # https://originhelp.synology.com/developer-guide/privilege/privilege_specification.html
-    chmod 0777 "${SYNOPKG_PKGDEST}/var/" >> "${INST_LOG}" 2>&1
+    #chmod 0777 "${SYNOPKG_PKGDEST}/var/" >> "${INST_LOG}" 2>&1
 
     blocklist_setup
 
@@ -180,13 +184,16 @@ service_postinst () {
 
 service_postuninst () {
     echo "service_postuninst ${SYNOPKG_PKG_STATUS}" >> "${INST_LOG}"
-    blocklist_cron_uninstall
+    if [ "${SYNOPKG_DSM_VERSION_MAJOR}" -lt 7 ]; then
+        blocklist_cron_uninstall
+        forward_dns_dhcpd "no"
+    fi
 
     # shellcheck disable=SC2129
     echo "Uninstall Help files" >> "${INST_LOG}"
     pkgindexer_del "${SYNOPKG_PKGDEST}/ui/helptoc.conf" >> "${INST_LOG}" 2>&1
     pkgindexer_del "${SYNOPKG_PKGDEST}/ui/index.conf" >> "${INST_LOG}" 2>&1
-    disable_dhcpd_dns_port "no"
+
     if [ "$OS" = "dsm" ]; then
         rm -f /etc/dhcpd/dhcpd-dns-dns.conf
         rm -f /etc/dhcpd/dhcpd-dns-dns.info
