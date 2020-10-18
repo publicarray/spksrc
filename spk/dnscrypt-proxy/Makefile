@@ -19,6 +19,7 @@ STARTABLE = yes
 
 WIZARDS_DIR = src/wizard/
 DSM_UI_DIR = ui
+DSM_APP_NAME = SYNO.SDS.DNSCryptProxy.Application
 FWPORTS = src/${SPK_NAME}.sc
 SERVICE_USER = auto
 SERVICE_SETUP = src/service-setup.sh
