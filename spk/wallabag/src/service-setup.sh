@@ -1,54 +1,41 @@
-# Package
-PACKAGE="wallabag"
-DNAME="Wallabag"
-PACKAGE_NAME="com.synocommunity.packages.${PACKAGE}"
-
-# Others
-INSTALL_DIR="/usr/local/${PACKAGE}"
 WEB_DIR="/var/services/web_packages"
 if [ $SYNOPKG_DSM_VERSION_MAJOR -lt 7 ];then
+SYNOPKG_TEMP_UPGRADE_FOLDER="${SYNOPKG_PKGDEST}/../../@tmp/${SYNOPKG_PKGNAME}"
 WEB_DIR="/var/services/web"
 fi
-HTTP_USER="$([ $(/bin/get_key_value /etc.defaults/VERSION buildnumber) -ge 4418 ] && echo -n http || echo -n nobody)"
-TMP_DIR="${SYNOPKG_PKGDEST}/../../@tmp"
+
 PHP="/usr/local/bin/php74"
-MYSQL="/usr/bin/mysql"
-MYSQLDUMP="/usr/bin/mysqldump"
-if command -v /var/packages/MariaDB10/target/usr/local/mariadb10/bin/mysql &> /dev/null; then
-    MYSQL="/var/packages/MariaDB10/target/usr/local/mariadb10/bin/mysql"
-fi
-if command -v /var/packages/MariaDB10/target/usr/local/mariadb10/bin/mysqldump &> /dev/null; then
-    MYSQLDUMP="/var/packages/MariaDB10/target/usr/local/mariadb10/bin/mysqldump"
-fi
-CFG_FILE="${WEB_DIR}/${PACKAGE}/app/config/parameters.yml"
-MYSQL_USER="wallabag"
-MYSQL_DATABASE="wallabag"
+MYSQL="/var/packages/MariaDB10/target/usr/local/mariadb10/bin/mysql"
+MYSQLDUMP="/var/packages/MariaDB10/target/usr/local/mariadb10/bin/mysqldump"
+
+CFG_FILE="${WEB_DIR}/${SYNOPKG_PKGNAME}/app/config/parameters.yml"
+MYSQL_USER=${SYNOPKG_PKGNAME}
+MYSQL_DATABASE=${SYNOPKG_PKGNAME}
 
 service_preinst ()
 {
-    mkdir -p ${WEB_DIR}/${PACKAGE}
-
-    # if [ $SYNOPKG_DSM_VERSION_MAJOR -lt 5 ];then
-        # Check database
-        if [ "${SYNOPKG_PKG_STATUS}" == "INSTALL" ]; then
-            if ! ${MYSQL} -u root -p"${wizard_mysql_password_root}" -e quit > /dev/null 2>&1; then
-                echo "Incorrect MySQL root password"
-                exit 1
-            fi
-            if ${MYSQL} -u root -p"${wizard_mysql_password_root}" mysql -e "SELECT User FROM user" | grep ^${MYSQL_USER}$ > /dev/null 2>&1; then
-                echo "MySQL user ${MYSQL_USER} already exists"
-                exit 1
-            fi
-            # if ${MYSQL} -u root -p"${wizard_mysql_password_root}" -e "SHOW DATABASES" | grep ^${MYSQL_DATABASE}$ > /dev/null 2>&1; then
-            #     echo "MySQL database ${MYSQL_DATABASE} already exists"
-            #     exit 1
-            # fi
+    # make sure the logfiles can log
+    mkdir -p ${WEB_DIR}/${SYNOPKG_PKGNAME}
+    # Check database
+    if [ "${SYNOPKG_PKG_STATUS}" == "INSTALL" ]; then
+        if ! ${MYSQL} -u root -p"${wizard_mysql_password_root}" -e quit > /dev/null 2>&1; then
+            echo "Incorrect MySQL root password"
+            exit 1
         fi
-        exit 0
-    # fi
+        # if ${MYSQL} -u root -p"${wizard_mysql_password_root}" mysql -e "SELECT User FROM user" | grep ^${MYSQL_USER}$ > /dev/null 2>&1; then
+        #     echo "MySQL user ${MYSQL_USER} already exists"
+        #     exit 1
+        # fi
+        # if ${MYSQL} -u root -p"${wizard_mysql_password_root}" -e "SHOW DATABASES" | grep ^${MYSQL_DATABASE}$ > /dev/null 2>&1; then
+        #     echo "MySQL database ${MYSQL_DATABASE} already exists"
+        #     exit 1
+        # fi
+    fi
+    exit 0
 }
 
-service_postinst () {
+service_postinst ()
+{
     # 'rand-pw' is not fully implemented on DSM 6 it requires 'user-pw' (mariadb10-db)
     # $ cat /var/log/messages
     # > dsm6 synoscgi_SYNO.Core.Package.Installation_1_install[27600]: synomariadbworker.cpp:483 Illegal field [grant-user][user-pw].
@@ -63,7 +50,7 @@ service_postinst () {
 
     if [ $SYNOPKG_DSM_VERSION_MAJOR -lt 7 ]; then
         # Install the web interface
-        cp -pR ${SYNOPKG_PKGDEST}/share/${PACKAGE} ${WEB_DIR}
+        cp -pR ${SYNOPKG_PKGDEST}/share/${SYNOPKG_PKGNAME} ${WEB_DIR}
     fi
 
     if [ "${SYNOPKG_PKG_STATUS}" == "INSTALL" ]; then
@@ -77,18 +64,18 @@ service_postinst () {
             -e "s|@database_name@|${MYSQL_DATABASE}|g" \
             -e "s|@database_port@|${wizard_database_port}|g" \
             -e "s|@protocoll_and_domain_name@|${wizard_protocoll_and_domain_name}/wallabag/web|g" \
-            -e "s|@wallabag_secret@|$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 30 | head -n 1)|g" ${CFG_FILE}
+            -e "s|@wallabag_secret@|$(cat /dev/urandom 2>/dev/null| env LC_ALL=C tr -dc 'a-zA-Z0-9' 2>/dev/null | head -c 30 | head -n 1)|g" ${CFG_FILE}
 
         # install wallabag
-        if ! ${PHP} ${WEB_DIR}/${PACKAGE}/bin/console wallabag:install --env=prod --reset -n -vvv > ${WEB_DIR}/${PACKAGE}/install.log 2>&1; then
-            echo "Failed to install wallabag. Please check the log: ${WEB_DIR}/${PACKAGE}/install.log"
+        if ! ${PHP} ${WEB_DIR}/${SYNOPKG_PKGNAME}/bin/console wallabag:install --env=prod --reset -n -vvv > ${WEB_DIR}/${SYNOPKG_PKGNAME}/install.log 2>&1; then
+            echo "Failed to install wallabag. Please check the log: ${WEB_DIR}/${SYNOPKG_PKGNAME}/install.log"
             exit 1
         fi
     fi
 
     if [ $SYNOPKG_DSM_VERSION_MAJOR -lt 7 ];then
         # permissions
-        chown -R ${HTTP_USER} ${WEB_DIR}/${PACKAGE}
+        chown -R http:http ${WEB_DIR}/${SYNOPKG_PKGNAME}
     fi
     exit 0
 }
@@ -127,41 +114,40 @@ service_postuninst ()
 
     if [ $SYNOPKG_DSM_VERSION_MAJOR -lt 7 ]; then
         # Remove the web interface
-        rm -rf ${WEB_DIR}/${PACKAGE}
+        rm -rf ${WEB_DIR}/${SYNOPKG_PKGNAME}
     fi
     exit 0
 }
 
 service_preupgrade ()
 {
-    rm -rf ${TMP_DIR}/${PACKAGE}
-    mkdir -p ${TMP_DIR}/${PACKAGE}
-    mv ${CFG_FILE} ${TMP_DIR}/${PACKAGE}/
-    mv ${WEB_DIR}/${PACKAGE}/data/db ${TMP_DIR}/${PACKAGE}/
+    mkdir -p ${SYNOPKG_TEMP_UPGRADE_FOLDER}
+    mv -f ${CFG_FILE} ${SYNOPKG_TEMP_UPGRADE_FOLDER}/
+    mv -f ${WEB_DIR}/${SYNOPKG_PKGNAME}/data/db ${SYNOPKG_TEMP_UPGRADE_FOLDER}/
     exit 0
 }
 
 service_postupgrade ()
 {
-    mv ${TMP_DIR}/${PACKAGE}/parameters.yml ${CFG_FILE}
-    mv ${TMP_DIR}/${PACKAGE}/db ${WEB_DIR}/${PACKAGE}/data/db
+    mv -f ${SYNOPKG_TEMP_UPGRADE_FOLDER}/parameters.yml ${CFG_FILE}
+    mv -f ${SYNOPKG_TEMP_UPGRADE_FOLDER}/db ${WEB_DIR}/${SYNOPKG_PKGNAME}/data/db
 
     # Add new parameters to parameters.yml for new version
-    if ! grep -q '^    server_name:' ${CFG_FILE}
+    if ! grep -q '^    server_name:' ${CFG_FILE}; then
         echo '    server_name: "wallabag"' >> ${CFG_FILE}
     fi
 
     # migrate database
-    if ! ${PHP} ${WEB_DIR}/${PACKAGE}/bin/console doctrine:migrations:migrate --env=prod -n -vvv > ${WEB_DIR}/${PACKAGE}/migration.log 2>&1; then
-        echo "Unable to migrate database schema. Please check the log: ${WEB_DIR}/${PACKAGE}/migration.log"
+    if ! ${PHP} ${WEB_DIR}/${SYNOPKG_PKGNAME}/bin/console doctrine:migrations:migrate --env=prod -n -vvv > ${WEB_DIR}/${SYNOPKG_PKGNAME}/migration.log 2>&1; then
+        echo "Unable to migrate database schema. Please check the log: ${WEB_DIR}/${SYNOPKG_PKGNAME}/migration.log"
         exit 1
     fi
 
     if [ $SYNOPKG_DSM_VERSION_MAJOR -lt 7 ];then
         # permissions after upgrade
-        chown -R ${USER} ${WEB_DIR}/${PACKAGE}
+        chown -R ${USER} ${WEB_DIR}/${SYNOPKG_PKGNAME}
     fi
 
-    rm -rf ${TMP_DIR}/${PACKAGE}
+    rm -rf ${SYNOPKG_TEMP_UPGRADE_FOLDER}/
     exit 0
 }

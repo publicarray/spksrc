@@ -150,7 +150,6 @@ postinst ()
     fi
 
     call_func "service_postinst"
-    call_func "service_create_links"
 
     exit 0
 }

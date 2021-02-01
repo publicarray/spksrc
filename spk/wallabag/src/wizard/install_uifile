@@ -9,7 +9,6 @@
           {
             "key": "wizard_mysql_password_root",
             "desc": "Root password",
-            "defaultValue": "",
             "validator": {
               "allowBlank": false
             }
@@ -23,7 +22,6 @@
             {
                 "key": "wizard_wallabag_password_root",
                 "desc": "Root password",
-                "defaultValue": "Wallabag1!",
                 "validator": {
                     "allowBlank": false
                 }
@@ -64,7 +62,6 @@
           {
             "key": "wizard_protocoll_and_domain_name",
             "desc": "Protocol and Domain Name",
-            "defaultValue": "http://127.0.0.1",
             "emptyText": "http://",
             "validator": {
               "allowBlank": false,
