@@ -1,6 +1,10 @@
 # Setup environment
 PATH="${SYNOPKG_PKGDEST}/bin:${PATH}"
 
+SERVICE_COMMAND="${SYNOPKG_PKGDEST}/bin/syncthing --home=${SYNOPKG_PKGVAR}"
+SVC_BACKGROUND=y
+SVC_WRITE_PID=y
+
 GROUP="sc-syncthing"
 LEGACY_GROUP="users"
 
@@ -19,7 +23,7 @@ service_postinst ()
 
 service_prestart ()
 {
-    CONFIG_DIR="${SYNOPKG_PKGDEST}/var"
+    CONFIG_DIR="${SYNOPKG_PKGVAR}"
     SYNCTHING_OPTIONS="-home=${CONFIG_DIR}"
 
     # Read additional startup options from /usr/local/syncthing/var/options.conf
@@ -30,6 +34,6 @@ service_prestart ()
     SERVICE_OPTIONS=$SYNCTHING_OPTIONS
 
     # Required: start-stop-daemon do not set environment variables
-    HOME=${SYNOPKG_PKGDEST}/var
+    HOME=${SYNOPKG_PKGVAR}
     export HOME
 }

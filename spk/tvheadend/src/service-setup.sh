@@ -7,8 +7,8 @@ HTSPP=9982
 
 # Replace generic service startup, run service in background
 GRPN=`id -gn ${EFF_USER}`
-HOME_DIR="${SYNOPKG_PKGDEST}/var"
-DVR_LOG_DIR="${SYNOPKG_PKGDEST}/var/dvr/log"
+HOME_DIR="${SYNOPKG_PKGVAR}"
+DVR_LOG_DIR="${SYNOPKG_PKGVAR}/dvr/log"
 SAVE_DIR="/tmp/tvheadend-recording-backup"
 SERVICE_COMMAND="${SYNOPKG_PKGDEST}/bin/tvheadend -f -u ${EFF_USER} -g ${GRPN} --http_port ${HTTPP} --htsp_port ${HTSPP} -c ${HOME_DIR} -p ${PID_FILE}"
 SVC_BACKGROUND=yes
@@ -22,7 +22,7 @@ service_postinst ()
     wizard_password=`echo -n "TVHeadend-Hide-${wizard_password:=admin}" | openssl enc -a`
 
     # Edit the password configuration according to the wizard
-    sed -i -e "s/@password@/${wizard_password}/g" ${SYNOPKG_PKGDEST}/var/passwd/a927e30a755504f9784f23a4efac5109
+    sed -i -e "s/@password@/${wizard_password}/g" ${SYNOPKG_PKGVAR}/passwd/a927e30a755504f9784f23a4efac5109
 
     # Fix fontconfig links
     CONFD_DIR="${SYNOPKG_PKGDEST}/etc/fonts/conf.d"
@@ -33,12 +33,6 @@ service_postinst ()
         FONT_NAME=`basename "${FONT_FILE}"`
         $LN "${FONTS_DIR}/${FONT_NAME}" "${CONFD_DIR}/${FONT_NAME}" >> ${INST_LOG}
     done
-
-    # Discard legacy obsolete busybox user account
-    BIN=${SYNOPKG_PKGDEST}/bin
-    $BIN/busybox --install $BIN
-    $BIN/delgroup "${USER}" "users" >> ${INST_LOG}
-    $BIN/deluser "${USER}" >> ${INST_LOG}
 }
 
 service_preupgrade ()
@@ -71,7 +65,7 @@ service_preupgrade ()
             fi
         done
         # Move recording directories from package root into var
-        UPGRADE_CFG_DIR="${SYNOPKG_PKGDEST}/var/dvr/config"
+        UPGRADE_CFG_DIR="${SYNOPKG_PKGVAR}/dvr/config"
         echo "Move any recording directories from package root directory into var..." >> ${INST_LOG}
         for file in ${UPGRADE_CFG_DIR}/*
         do
@@ -100,7 +94,7 @@ service_postupgrade ()
 
     # Need to enforce correct permissions for recording directories on upgrades
     echo "Adding ${GROUP} group permissions on recording directories:"  >> ${INST_LOG}
-    UPGRADE_CFG_DIR="${SYNOPKG_PKGDEST}/var/dvr/config"
+    UPGRADE_CFG_DIR="${SYNOPKG_PKGVAR}/dvr/config"
     for file in ${UPGRADE_CFG_DIR}/*
     do
         DVR_DIR=`grep -e 'storage\":' ${file} | awk -F'"' '{print $4}'`
@@ -108,7 +102,7 @@ service_postupgrade ()
         TRUNC_DIR=$(echo "$(realpath ${DVR_DIR})" | awk -F/ '{print "/"$3}')
         if [ "${TRUNC_DIR}" = "/@appstore" ]; then
             echo "Skip: ${DVR_DIR} (system directory)" >> ${INST_LOG}
-        else
+        elif [ $SYNOPKG_DSM_VERSION_MAJOR -lt 7 ]; then
             echo "Done: ${DVR_DIR}" >> ${INST_LOG}
             set_syno_permissions "${DVR_DIR}" "${GROUP}"
         fi
@@ -119,8 +113,8 @@ service_postupgrade ()
     if [ $SYNOPKG_DSM_VERSION_MAJOR -lt 6 ]; then
         synoacltool -del "${SYNOPKG_PKGDEST}" >> ${INST_LOG} 2>&1
         chown ${EFF_USER}:root "/var/packages/tvheadend" >> ${INST_LOG} 2>&1
-    else
+    elif [ $SYNOPKG_DSM_VERSION_MAJOR == 6 ]; then
         chown ${EFF_USER}:${USER} "/var/packages/tvheadend/target" >> ${INST_LOG} 2>&1
-        set_unix_permissions "${SYNOPKG_PKGDEST}/var"
+        set_unix_permissions "${SYNOPKG_PKGVAR}"
     fi
 }
