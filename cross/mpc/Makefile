@@ -1,5 +1,5 @@
 PKG_NAME = mpc
-PKG_VERS = 1.1.0
+PKG_VERS = 1.2.1
 PKG_EXT = tar.gz
 PKG_DIST_NAME = $(PKG_NAME)-$(PKG_VERS).$(PKG_EXT)
 PKG_DIST_SITE = https://ftp.gnu.org/gnu/mpc
@@ -13,7 +13,8 @@ LICENSE  = LGPLv3
 
 GNU_CONFIGURE = 1
 
-CONFIGURE_ARGS = --with-gmp=$(STAGING_INSTALL_PREFIX)
+include ../../mk/spksrc.cross-cc.mk
+
+CONFIGURE_ARGS += --with-gmp=$(STAGING_INSTALL_PREFIX)
 CONFIGURE_ARGS += --with-mpfr=$(STAGING_INSTALL_PREFIX)
 
-include ../../mk/spksrc.cross-cc.mk
