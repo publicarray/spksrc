@@ -30,7 +30,7 @@
                     "backend": 8,
                     "open_basedir": "/var/services/web_packages/wallabag:/tmp:/var/services/tmp",
                     "extensions": [
-                        "bcmaths",
+                        "bcmath",
                         "curl",
                         "gd",
                         "gettext",
