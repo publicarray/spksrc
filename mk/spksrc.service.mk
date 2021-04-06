@@ -43,7 +43,7 @@ endif
 .PHONY: $(PRE_SERVICE_TARGET) $(SERVICE_TARGET) $(POST_SERVICE_TARGET)
 .PHONY: $(DSM_SCRIPTS_DIR)/service-setup $(DSM_SCRIPTS_DIR)/start-stop-status
 .PHONY: $(DSM_CONF_DIR)/privilege $(DSM_CONF_DIR)/resource
-.PHONY: $(DSM_CONF_DIR)/$(SPK_NAME).sc $(STAGING_DIR)/$(DSM_UI_DIR)/config
+.PHONY: $(STAGING_DIR)/$(DSM_UI_DIR)/$(SPK_NAME).sc $(STAGING_DIR)/$(DSM_UI_DIR)/config
 
 service_msg_target:
 	@$(MSG) "Generating service scripts for $(NAME)"
@@ -156,6 +156,12 @@ endif
 $(DSM_CONF_DIR)/resource:
 	$(create_target_dir)
 	@echo '{}' > $@
+ifneq ($(strip $(SERVICE_PORT)),)
+	@jq '."port-config"."protocol-file" = "$(DSM_UI_DIR)/$(SPK_NAME).sc"' $@ 1<>$@
+endif
+ifneq ($(strip $(FWPORTS)),)
+	@jq '."port-config"."protocol-file" = "$(DSM_UI_DIR)/$(FWPORTS)"' $@ 1<>$@
+endif
 ifneq ($(strip $(SPK_COMMANDS)),)
 # e.g. SPK_COMMANDS=bin/foo bin/bar
 	@jq --arg binaries '$(SPK_COMMANDS)' \
@@ -233,9 +239,6 @@ ifneq ($(strip $(GROUP)),)
 # or use the shared folder resource worker to add permissions, ask user from wizard see transmission package for an example
 	@jq --arg packagename $(GROUP) '."join-pkg-groupnames" += [{$$packagename}]' $@ 1<>$@
 endif
-ifeq ($(strip $(FWPORTS)),)
-	@jq '."port-config"."protocol-file" = "$(SPK_NAME).sc"' $@ 1<>$@
-endif
 endif
 ifneq ($(strip $(SYSTEM_GROUP)),)
 # options: http, system
@@ -260,7 +263,7 @@ SERVICE_FILES += $(DSM_CONF_DIR)/privilege
 # Generate service configuration for admin port
 ifeq ($(strip $(FWPORTS)),)
 ifneq ($(strip $(SERVICE_PORT)),)
-$(DSM_CONF_DIR)/$(SPK_NAME).sc:
+$(STAGING_DIR)/$(DSM_UI_DIR)/$(SPK_NAME).sc:
 	$(create_target_dir)
 	@echo "[$(SPK_NAME)]" > $@
 ifneq ($(strip $(SERVICE_PORT_TITLE)),)
@@ -278,15 +281,15 @@ endif
 ifneq ($(findstring conf,$(SPK_CONTENT)),conf)
 SPK_CONTENT += conf
 endif
-SERVICE_FILES += $(DSM_CONF_DIR)/$(SPK_NAME).sc
+SERVICE_FILES += $(STAGING_DIR)/$(DSM_UI_DIR)/$(SPK_NAME).sc
 endif
 else
-$(DSM_CONF_DIR)/$(SPK_NAME).sc: $(filter %.sc,$(FWPORTS))
+$(STAGING_DIR)/$(DSM_UI_DIR)/$(SPK_NAME).sc: $(filter %.sc,$(FWPORTS))
 	@$(dsm_script_copy)
 ifneq ($(findstring conf,$(SPK_CONTENT)),conf)
 SPK_CONTENT += conf
 endif
-SERVICE_FILES += $(DSM_CONF_DIR)/$(SPK_NAME).sc
+SERVICE_FILES += $(STAGING_DIR)/$(DSM_UI_DIR)/$(SPK_NAME).sc
 endif
 
 # Generate DSM UI configuration
