@@ -1,5 +1,5 @@
 PKG_NAME = dnscrypt-proxy
-PKG_VERS = 2.0.44
+PKG_VERS = 2.0.45
 PKG_EXT = tar.gz
 PKG_DIST_NAME = $(PKG_VERS).$(PKG_EXT)
 PKG_DIST_SITE = https://github.com/jedisct1/$(PKG_NAME)/archive
@@ -24,4 +24,4 @@ include ../../mk/spksrc.cross-go.mk
 dnscrypt_post_install:
 	install -m 755 -d $(STAGING_INSTALL_PREFIX)/blocklist
 	install -m 644 $(GO_SRC_DIR)/example-* $(STAGING_INSTALL_PREFIX)
-	install -m 644 $(GO_SRC_DIR)/../utils/generate-domains-blacklists/* $(STAGING_INSTALL_PREFIX)/blocklist
+	install -m 644 $(GO_SRC_DIR)/../utils/generate-domains-blocklist/* $(STAGING_INSTALL_PREFIX)/blocklist
