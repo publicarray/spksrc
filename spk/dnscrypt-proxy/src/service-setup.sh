@@ -1,12 +1,13 @@
 # shellcheck disable=SC2148
 SVC_CWD="${SYNOPKG_PKGDEST}"
 DNSCRYPT_PROXY="${SYNOPKG_PKGDEST}/bin/dnscrypt-proxy"
-PID_FILE="${SYNOPKG_PKGDEST}/var/dnscrypt-proxy.pid"
-CFG_FILE="${SYNOPKG_PKGDEST}/var/dnscrypt-proxy.toml"
+PID_FILE="${SYNOPKG_PKGVAR}/dnscrypt-proxy.pid"
+CFG_FILE="${SYNOPKG_PKGVAR}/dnscrypt-proxy.toml"
 EXAMPLE_FILES="${SYNOPKG_PKGDEST}/example-*"
 BACKUP_PORT="10053"
 ## I need root to bind to port 53 see `service_prestart()` below
-#SERVICE_COMMAND="${DNSCRYPT_PROXY} --config ${CFG_FILE} --pidfile ${PID_FILE} &"
+SERVICE_COMMAND="${DNSCRYPT_PROXY} --config ${CFG_FILE} --pidfile ${PID_FILE}"
+SVC_BACKGROUND=y
 
 echo "DSM Version: $SYNOPKG_DSM_VERSION_MAJOR.$SYNOPKG_DSM_VERSION_MINOR-$SYNOPKG_DSM_VERSION_BUILD"
 # SRM 1.2 example: DSM Version: 5.2-7915
@@ -22,14 +23,14 @@ fi
 echo "OS detected: $OS"
 
 blocklist_setup () {
-    ## https://github.com/jedisct1/dnscrypt-proxy/wiki/Public-blacklists
-    ## https://github.com/jedisct1/dnscrypt-proxy/tree/master/utils/generate-domains-blacklists
-    echo "Install/Upgrade generate-domains-blacklist.py (requires python)"
+    ## https://github.com/jedisct1/dnscrypt-proxy/wiki/Public-blocklists
+    ## https://github.com/jedisct1/dnscrypt-proxy/tree/master/utils/generate-domains-blocklists
+    echo "Install/Upgrade generate-domains-blocklist.py (requires python)"
     mkdir -p "${SYNOPKG_PKGDEST}/var"
-    touch "${SYNOPKG_PKGDEST}"/var/ip-blocklist.txt
-    if [ ! -e "${SYNOPKG_PKGDEST}/var/domains-blacklist.conf" ]; then
-        wget -t 3 -O "${SYNOPKG_PKGDEST}/var/domains-blacklist.conf" \
-            --https-only https://raw.githubusercontent.com/jedisct1/dnscrypt-proxy/master/utils/generate-domains-blacklists/domains-blacklist.conf
+    touch "${SYNOPKG_PKGVAR}"/ip-blocklist.txt
+    if [ ! -e "${SYNOPKG_PKGVAR}/domains-blocklist.conf" ]; then
+        wget -t 3 -O "${SYNOPKG_PKGVAR}/domains-blocklist.conf" \
+            --https-only https://raw.githubusercontent.com/jedisct1/dnscrypt-proxy/master/utils/generate-domains-blocklist/domains-blocklist.conf
     fi
 }
 
@@ -88,115 +89,134 @@ service_prestart () {
     echo "service_preinst ${SYNOPKG_PKG_STATUS}"
 
     # Install daily cron job (3 minutes past midnight), to update the block list
-    if [ "$OS" = 'dsm' ]; then
+    if [ "$OS" = 'dsm' ] && [ "$SYNOPKG_DSM_VERSION_MAJOR" -lt 7 ]; then
         mkdir -p /etc/cron.d
         echo "3       0       *       *       *       root    /var/packages/dnscrypt-proxy/target/var/update-blocklist.sh" >> /etc/cron.d/dnscrypt-proxy-update-blocklist
-    else # RSM
+    elif [ "$OS" = 'srm' ]; then
         echo "3       0       *       *       *       root    /var/packages/dnscrypt-proxy/target/var/update-blocklist.sh" >> /etc/crontab
     fi
-    synoservicectl --restart crond
 
-    # This fixes https://github.com/SynoCommunity/spksrc/issues/3468
-    # This can't be done at install time. see:
-    #  https://github.com/SynoCommunity/spksrc/blob/e914a32600e65f80131ae09913f1b6f6a2dd8b13/mk/spksrc.service.installer#L307-L319
-    chown root:root "${SYNOPKG_PKGDEST}/ui/index.cgi"
-    forward_dns_dhcpd "yes"
-    cd "$SVC_CWD" || exit 1
+    if [ "$OS" = 'dsm' ] && [ "$SYNOPKG_DSM_VERSION_MAJOR" -lt 7 ] || [ "$OS" = 'srm' ]; then
+        synoservicectl --restart crond
+        # This fixes https://github.com/SynoCommunity/spksrc/issues/3468
+        # This can't be done at install time. see:
+        #  https://github.com/SynoCommunity/spksrc/blob/e914a32600e65f80131ae09913f1b6f6a2dd8b13/mk/spksrc.service.installer#L307-L319
+        chown root:root "${SYNOPKG_PKGDEST}/ui/index.cgi"
+        forward_dns_dhcpd "yes"
+        cd "$SVC_CWD" || exit 1
 
-    # Limit num of processes https://golang.org/pkg/runtime/
-    #
-    # Fixes https://github.com/ksonnet/ksonnet/issues/298
-    #  until https://github.com/golang/go/commit/3a18f0ecb5748488501c565e995ec12a29e66966
-    #  is released.
-    # related https://github.com/golang/go/issues/14626
-    # https://github.com/golang/go/blob/release-branch.go1.11/src/os/user/lookup_stubs.go
-    #
-    # override community script from this point and launch the program ourselves
-    env GOMAXPROCS=1 USER=root HOME=/root "${DNSCRYPT_PROXY}" --config "${CFG_FILE}" --pidfile "${PID_FILE}" &
-    # su "${EFF_USER}" -s /bin/false -c "cd ${SVC_CWD}; ${DNSCRYPT_PROXY} --config ${CFG_FILE} --pidfile ${PID_FILE} --logfile ${LOG_FILE}" &
+        # Limit num of processes https://golang.org/pkg/runtime/
+        #
+        # Fixes https://github.com/ksonnet/ksonnet/issues/298
+        #  until https://github.com/golang/go/commit/3a18f0ecb5748488501c565e995ec12a29e66966
+        #  is released.
+        # related https://github.com/golang/go/issues/14626
+        # https://github.com/golang/go/blob/release-branch.go1.11/src/os/user/lookup_stubs.go
+        #
+        # override community script from this point and launch the program ourselves
+        env GOMAXPROCS=1 USER=root HOME=/root "${DNSCRYPT_PROXY}" --config "${CFG_FILE}" --pidfile "${PID_FILE}" &
+        # su "${EFF_USER}" -s /bin/false -c "cd ${SVC_CWD}; ${DNSCRYPT_PROXY} --config ${CFG_FILE} --pidfile ${PID_FILE} --logfile ${LOG_FILE}" &
+    fi
 }
 
 service_poststop () {
     echo "After stop (service_poststop)"
-    blocklist_cron_uninstall
-    forward_dns_dhcpd "no"
+    if [ "$OS" = 'dsm' ] && [ "$SYNOPKG_DSM_VERSION_MAJOR" -lt 7 ] || [ "$OS" = 'srm' ]; then
+        blocklist_cron_uninstall
+        forward_dns_dhcpd "no"
+    fi
 }
 
 service_postinst () {
     echo "Running service_postinst script"
-    mkdir -p "${SYNOPKG_PKGDEST}"/var
     if [ ! -e "${CFG_FILE}" ]; then
         # shellcheck disable=SC2086
-        cp -f ${EXAMPLE_FILES} "${SYNOPKG_PKGDEST}/var/"
-        cp -f "${SYNOPKG_PKGDEST}"/offline-cache/* "${SYNOPKG_PKGDEST}/var/"
-        cp -f "${SYNOPKG_PKGDEST}"/blocklist/* "${SYNOPKG_PKGDEST}/var/"
+        cp -f ${EXAMPLE_FILES} "${SYNOPKG_PKGVAR}/"
+        cp -f "${SYNOPKG_PKGDEST}"/offline-cache/* "${SYNOPKG_PKGVAR}/"
+        cp -f "${SYNOPKG_PKGDEST}"/blocklist/* "${SYNOPKG_PKGVAR}/"
         # shellcheck disable=SC2231
-        for file in ${SYNOPKG_PKGDEST}/var/example-*; do
+        for file in ${SYNOPKG_PKGVAR}/example-*; do
             mv "${file}" "${file//example-/}"
         done
 
-        echo "Applying settings from Wizard..."
-        ## if empty comment out server list
-        wizard_servers=${wizard_servers:-""}
-        if [ -z "${wizard_servers// }" ]; then
-            server_names_enabled="# "
-        fi
+        sed -i -e "s/listen_addresses = .*/listen_addresses = \['0.0.0.0:$SERVICE_PORT'\]/" \
+                -e "s/require_dnssec = .*/require_dnssec = true/" \
+                -e "s/netprobe_timeout = .*/netprobe_timeout = 2/" \
+                -e "s/ipv6_servers = .*/ipv6_servers = false/" \
+                "${CFG_FILE}"
 
-        # Check for dhcp
-        if pgrep "dhcpd.conf" || netstat -na | grep ":${SERVICE_PORT} "; then
-            echo "dhcpd is running or port ${SERVICE_PORT} is in use. Switching service port to ${BACKUP_PORT}"
-            SERVICE_PORT=${BACKUP_PORT}
-        fi
+        chmod g+rw -R "$SYNOPKG_PKGVAR"
 
-        ## IPv6 address errors with -> bind: address already in use
-        #listen_addresses=\[${wizard_listen_address:-"'0.0.0.0:$SERVICE_PORT', '[::1]:$SERVICE_PORT'"}\]
-        listen_addresses=\[${wizard_listen_address:-"'0.0.0.0:$SERVICE_PORT'"}\]
-        server_names=\[${wizard_servers:-"'scaleway-fr', 'google', 'yandex', 'cloudflare'"}\]
-
-        ## change default settings
-        sed -i -e "s/# server_names = .*/${server_names_enabled:-""}server_names = ${server_names}/" \
-            -e "s/listen_addresses = .*/listen_addresses = ${listen_addresses}/" \
-            -e "s/# user_name = .*/user_name = '${EFF_USER:-"nobody"}'/" \
-            -e "s/require_dnssec = .*/require_dnssec = true/" \
-            -e "s|# log_file = 'dnscrypt-proxy.log'.*|log_file = '${LOG_FILE:-""}'|" \
-            -e "s/netprobe_timeout = .*/netprobe_timeout = 2/" \
-            -e "s/ipv6_servers = .*/ipv6_servers = ${wizard_ipv6:=false}/" \
-            "${CFG_FILE}"
     fi
 
-    echo "Fixing permissions for cgi GUI... "
-    # Fixes https://github.com/publicarray/spksrc/issues/3
-    # https://originhelp.synology.com/developer-guide/privilege/privilege_specification.html
-    chmod 0777 "${SYNOPKG_PKGDEST}/var/"
+    if [ "$OS" = 'dsm' ] && [ "$SYNOPKG_DSM_VERSION_MAJOR" -lt 7 ] || [ "$OS" = 'srm' ]; then
+        mkdir -p "${SYNOPKG_PKGVAR}"
+        if [ ! -e "${CFG_FILE}" ]; then
+            echo "Applying settings from Wizard..."
+            ## if empty comment out server list
+            wizard_servers=${wizard_servers:-""}
+            if [ -z "${wizard_servers// }" ]; then
+                server_names_enabled="# "
+            fi
 
-    blocklist_setup
+            # Check for dhcp
+            if pgrep "dhcpd.conf" || netstat -na | grep ":${SERVICE_PORT} "; then
+                echo "dhcpd is running or port ${SERVICE_PORT} is in use. Switching service port to ${BACKUP_PORT}"
+                SERVICE_PORT=${BACKUP_PORT}
+            fi
 
-    # shellcheck disable=SC2129
-    echo "Install Help files"
-    pkgindexer_add "${SYNOPKG_PKGDEST}/ui/index.conf"
-    pkgindexer_add "${SYNOPKG_PKGDEST}/ui/helptoc.conf"
-    # pkgindexer_add "${SYNOPKG_PKGDEST}/ui/helptoc.conf" "${SYNOPKG_PKGDEST}/indexdb/helpindexdb"   # DSM 6.0 ?
+            ## IPv6 address errors with -> bind: address already in use
+            #listen_addresses=\[${wizard_listen_address:-"'0.0.0.0:$SERVICE_PORT', '[::1]:$SERVICE_PORT'"}\]
+            listen_addresses=\[${wizard_listen_address:-"'0.0.0.0:$SERVICE_PORT'"}\]
+            server_names=\[${wizard_servers:-"'scaleway-fr', 'google', 'yandex', 'cloudflare'"}\]
+
+            ## change default settings
+            sed -i -e "s/# server_names = .*/${server_names_enabled:-""}server_names = ${server_names}/" \
+                -e "s/listen_addresses = .*/listen_addresses = ${listen_addresses}/" \
+                -e "s/# user_name = .*/user_name = '${EFF_USER:-"nobody"}'/" \
+                -e "s/require_dnssec = .*/require_dnssec = true/" \
+                -e "s|# log_file = 'dnscrypt-proxy.log'.*|log_file = '${LOG_FILE:-"dnscrypt-proxy.log"}'|" \
+                -e "s/netprobe_timeout = .*/netprobe_timeout = 2/" \
+                -e "s/ipv6_servers = .*/ipv6_servers = ${wizard_ipv6:=false}/" \
+                "${CFG_FILE}"
+        fi
+
+        echo "Fixing permissions for cgi GUI... "
+        # Fixes https://github.com/publicarray/spksrc/issues/3
+        # https://originhelp.synology.com/developer-guide/privilege/privilege_specification.html
+        chmod 0777 "${SYNOPKG_PKGVAR}/"
+
+        blocklist_setup
+
+        # shellcheck disable=SC2129
+        echo "Install Help files"
+        pkgindexer_add "${SYNOPKG_PKGDEST}/ui/index.conf"
+        pkgindexer_add "${SYNOPKG_PKGDEST}/ui/helptoc.conf"
+        # pkgindexer_add "${SYNOPKG_PKGDEST}/ui/helptoc.conf" "${SYNOPKG_PKGDEST}/indexdb/helpindexdb"   # DSM 6.0 ?
+    fi
 }
 
 service_postuninst () {
     echo "service_postuninst ${SYNOPKG_PKG_STATUS}"
-    blocklist_cron_uninstall
+    if [ "$OS" = 'dsm' ] && [ "$SYNOPKG_DSM_VERSION_MAJOR" -lt 7 ] || [ "$OS" = 'srm' ]; then
+        blocklist_cron_uninstall
 
-    # shellcheck disable=SC2129
-    echo "Uninstall Help files"
-    pkgindexer_del "${SYNOPKG_PKGDEST}/ui/helptoc.conf"
-    pkgindexer_del "${SYNOPKG_PKGDEST}/ui/index.conf"
-    disable_dhcpd_dns_port "no"
-    if [ "$OS" = "dsm" ]; then
-        rm -f /etc/dhcpd/dhcpd-dns-dns.conf
-        rm -f /etc/dhcpd/dhcpd-dns-dns.info
-    else
-        rm -f /etc/dhcpd/dhcpd-dnscrypt-dnscrypt.conf
-        rm -f /etc/dhcpd/dhcpd-dnscrypt-dnscrypt.info
+        # shellcheck disable=SC2129
+        echo "Uninstall Help files"
+        pkgindexer_del "${SYNOPKG_PKGDEST}/ui/helptoc.conf"
+        pkgindexer_del "${SYNOPKG_PKGDEST}/ui/index.conf"
+        disable_dhcpd_dns_port "no"
+        if [ "$OS" = "dsm" ]; then
+            rm -f /etc/dhcpd/dhcpd-dns-dns.conf
+            rm -f /etc/dhcpd/dhcpd-dns-dns.info
+        else
+            rm -f /etc/dhcpd/dhcpd-dnscrypt-dnscrypt.conf
+            rm -f /etc/dhcpd/dhcpd-dnscrypt-dnscrypt.info
+        fi
     fi
 }
 
 service_postupgrade () {
     # upgrade script when the offline-cache is also updated
-    cp -f "${SYNOPKG_PKGDEST}"/blocklist/generate-domains-blacklist.py "${SYNOPKG_PKGDEST}/var/"
+    cp -f "${SYNOPKG_PKGDEST}"/blocklist/generate-domains-blocklist.py "${SYNOPKG_PKGVAR}/"
 }
