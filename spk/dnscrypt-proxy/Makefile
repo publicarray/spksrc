@@ -11,6 +11,7 @@ DESCRIPTION = A flexible DNS proxy, with support for modern encrypted DNS protoc
 DISPLAY_NAME = dnscrypt-proxy
 HELPURL = https://github.com/jedisct1/dnscrypt-proxy/wiki
 LICENSE = ISC
+LICENSE_FILE = $(WORK_DIR)/src/github.com/$(SPK_NAME)/$(SPK_NAME)-$(SPK_VERS)/LICENSE
 CHANGELOG = "Update dnscrypt-proxy to 2.0.45"
 
 SERVICE_USER = auto

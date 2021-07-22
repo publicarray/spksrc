@@ -11,8 +11,8 @@ SVC_BACKGROUND=y
 
 default_config () {
     # if [ servicetool --conf-port-conflict-check --tcp 53]
-    sed -i -e "s/listen_addresses = .*/listen_addresses = \['0.0.0.0:$SERVICE_PORT'\]/" \
-        -e "s/netprobe_timeout = .*/netprobe_timeout = 2/" \
+    sed -i -e "s/listen_addresses\s*=.*/listen_addresses = \['0.0.0.0:$SERVICE_PORT'\]/" \
+        -e "s/netprobe_timeout\s*=.*/netprobe_timeout = 2/" \
         "${CFG_FILE}"
 }
 
