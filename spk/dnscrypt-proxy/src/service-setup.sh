@@ -9,27 +9,39 @@ SYNOPKG_PKGHOME="${SYNOPKG_PKGHOME:=$SYNOPKG_PKGVAR}"
 SERVICE_COMMAND="env HOME=${SYNOPKG_PKGHOME} ${DNSCRYPT_PROXY} --config ${CFG_FILE} --pidfile ${PID_FILE}"
 SVC_BACKGROUND=y
 
-migrate_files () { # from 2.0.44 to 2.0.45
-    # we are already running as ${EFF_USER} user set from the privilege file
-    sed -i -e "s|^user_name\s*=.*|# user_name = '${EFF_USER:="nobody"}'|g" "${SYNOPKG_PKGVAR}/dnscrypt-proxy.toml"
+default_config () {
+    # if [ servicetool --conf-port-conflict-check --tcp 53]
+    sed -i -e "s/listen_addresses = .*/listen_addresses = \['0.0.0.0:$SERVICE_PORT'\]/" \
+        -e "s/netprobe_timeout = .*/netprobe_timeout = 2/" \
+        "${CFG_FILE}"
+}
 
-    if [ -f "${SYNOPKG_PKGVAR}/blacklist.txt" ]; then
-        mv "${SYNOPKG_PKGVAR}/blacklist.txt" "${SYNOPKG_PKGVAR}/domains-blocklist.txt"
-    fi
-    if [ -f "${SYNOPKG_PKGVAR}/domains-blacklist.conf" ]; then
-        mv "${SYNOPKG_PKGVAR}/domains-blacklist.conf" "${SYNOPKG_PKGVAR}/domains-blocklist.conf"
-    fi
-    if [ -f "${SYNOPKG_PKGVAR}/generate-domains-blacklist.py" ]; then
-        mv "${SYNOPKG_PKGVAR}/generate-domains-blacklist.py" "${SYNOPKG_PKGVAR}/generate-domains-blocklist.py"
-    fi
-    if [ -f "${SYNOPKG_PKGVAR}/domains-blacklist-local-additions.txt" ]; then
-        mv "${SYNOPKG_PKGVAR}/domains-blacklist-local-additions.txt" "${SYNOPKG_PKGVAR}/domains-blocklist-local-additions.txt"
-    fi
-    if [ -f "${SYNOPKG_PKGVAR}/ip-blacklist.txt" ]; then
-        mv "${SYNOPKG_PKGVAR}/ip-blacklist.txt" "${SYNOPKG_PKGVAR}/blocked-ips.txt"
-    fi
-    if [ -f "${SYNOPKG_PKGVAR}/domains-whitelist.txt" ]; then
-        mv "${SYNOPKG_PKGVAR}/domains-whitelist.txt" "${SYNOPKG_PKGVAR}/allowed-names.txt"
+migrate_files () { # from 2.0.44 to 2.0.45
+    echo SYNOPKG_OLD_PKGVER=$SYNOPKG_OLD_PKGVER
+    # check if files where already migrated
+    if [ ! -f "${SYNOPKG_PKGVAR}/domains-blocklist.txt" ]; then
+        # Override config file since there are too many changes to use sed to upgrade them.
+        cp -f "${SYNOPKG_PKGDEST}/example-dnscrypt-proxy.toml" "$CFG_FILE"
+        default_config
+
+        if [ -f "${SYNOPKG_PKGVAR}/blacklist.txt" ]; then
+            mv "${SYNOPKG_PKGVAR}/blacklist.txt" "${SYNOPKG_PKGVAR}/domains-blocklist.txt"
+        fi
+        if [ -f "${SYNOPKG_PKGVAR}/domains-blacklist.conf" ]; then
+            mv "${SYNOPKG_PKGVAR}/domains-blacklist.conf" "${SYNOPKG_PKGVAR}/domains-blocklist.conf"
+        fi
+        if [ -f "${SYNOPKG_PKGVAR}/generate-domains-blacklist.py" ]; then
+            mv "${SYNOPKG_PKGVAR}/generate-domains-blacklist.py" "${SYNOPKG_PKGVAR}/generate-domains-blocklist.py"
+        fi
+        if [ -f "${SYNOPKG_PKGVAR}/domains-blacklist-local-additions.txt" ]; then
+            mv "${SYNOPKG_PKGVAR}/domains-blacklist-local-additions.txt" "${SYNOPKG_PKGVAR}/domains-blocklist-local-additions.txt"
+        fi
+        if [ -f "${SYNOPKG_PKGVAR}/ip-blacklist.txt" ]; then
+            mv "${SYNOPKG_PKGVAR}/ip-blacklist.txt" "${SYNOPKG_PKGVAR}/blocked-ips.txt"
+        fi
+        if [ -f "${SYNOPKG_PKGVAR}/domains-whitelist.txt" ]; then
+            mv "${SYNOPKG_PKGVAR}/domains-whitelist.txt" "${SYNOPKG_PKGVAR}/allowed-names.txt"
+        fi
     fi
 }
 
@@ -37,7 +49,7 @@ blocklist_setup () {
     ## https://github.com/jedisct1/dnscrypt-proxy/wiki/Public-blocklists
     ## https://github.com/jedisct1/dnscrypt-proxy/tree/master/utils/generate-domains-blocklists
     echo "Install/Upgrade generate-domains-blocklist.py (requires python)"
-    touch "${SYNOPKG_PKGVAR}"/ip-blocklist.txt
+    touch "${SYNOPKG_PKGVAR}/blocked-ips.txt"
     if [ ! -e "${SYNOPKG_PKGVAR}/domains-blocklist.conf" ]; then
         wget -t 3 -O "${SYNOPKG_PKGVAR}/domains-blocklist.conf" \
             --https-only https://raw.githubusercontent.com/jedisct1/dnscrypt-proxy/master/utils/generate-domains-blocklist/domains-blocklist.conf
@@ -87,12 +99,7 @@ service_postinst () {
         for file in ${SYNOPKG_PKGVAR}/example-*; do
             mv "${file}" "${file//example-/}"
         done
-        # if [ servicetool --conf-port-conflict-check --tcp 53]
-        sed -i -e "s/listen_addresses = .*/listen_addresses = \['0.0.0.0:$SERVICE_PORT'\]/" \
-                -e "s/require_dnssec = .*/require_dnssec = true/" \
-                -e "s/netprobe_timeout = .*/netprobe_timeout = 2/" \
-                -e "s/ipv6_servers = .*/ipv6_servers = false/" \
-                "${CFG_FILE}"
+        default_config
 
         # allow synocommuity group access (synoedit)
         chmod g+rw -R "$SYNOPKG_PKGVAR"
