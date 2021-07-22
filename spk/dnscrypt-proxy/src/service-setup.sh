@@ -9,12 +9,8 @@ SYNOPKG_PKGHOME="${SYNOPKG_PKGHOME:=$SYNOPKG_PKGVAR}"
 SERVICE_COMMAND="env HOME=${SYNOPKG_PKGHOME} ${DNSCRYPT_PROXY} --config ${CFG_FILE} --pidfile ${PID_FILE}"
 SVC_BACKGROUND=y
 
-echo "DSM Version: $SYNOPKG_DSM_VERSION_MAJOR.$SYNOPKG_DSM_VERSION_MINOR-$SYNOPKG_DSM_VERSION_BUILD"
-# SRM 1.2 example: DSM Version: 5.2-7915
-# DSM 6.2 example: DSM Version: 6.2-23739
-
 migrate_files () { # from 2.0.44 to 2.0.45
-    # we are already running as ${EFF_USER} user
+    # we are already running as ${EFF_USER} user set from the privilege file
     sed -i -e "s|^user_name\s*=.*|# user_name = '${EFF_USER:="nobody"}'|g" "${SYNOPKG_PKGVAR}/dnscrypt-proxy.toml"
 
     if [ -f "${SYNOPKG_PKGVAR}/blacklist.txt" ]; then
@@ -35,27 +31,12 @@ migrate_files () { # from 2.0.44 to 2.0.45
     if [ -f "${SYNOPKG_PKGVAR}/domains-whitelist.txt" ]; then
         mv "${SYNOPKG_PKGVAR}/domains-whitelist.txt" "${SYNOPKG_PKGVAR}/allowed-names.txt"
     fi
-
-    ## OLD
-    # blacklist.txt               dnscrypt-proxy.toml                    forwarding-rules.txt           public-resolvers.md.minisig
-    # cloaking-rules.txt          domains-blacklist.conf                 generate-domains-blacklist.py  relays.md
-    # dnscrypt-proxy_install.log  domains-blacklist-local-additions.txt  ip-blacklist.txt               relays.md.minisig
-    # dnscrypt-proxy.log          domains-time-restricted.txt                                           update-blocklist.sh
-    # dnscrypt-proxy.pid          domains-whitelist.txt                  public-resolvers.md            whitelist.txt
-
-    ## NEW
-    # allowed-ips.txt      cloaking-rules.txt     domains-blocklist.conf                 public-resolvers.md
-    # allowed-names.txt    dnscrypt-proxy.log     domains-blocklist-local-additions.txt  public-resolvers.md.minisig
-    # blocked-ips.txt      dnscrypt-proxy.pid     domains-time-restricted.txt            relays.md
-    # blocked-names.txt    dnscrypt-proxy.toml    forwarding-rules.txt                   relays.md.minisig
-    # captive-portals.txt  domains-allowlist.txt  generate-domains-blocklist.py
 }
 
 blocklist_setup () {
     ## https://github.com/jedisct1/dnscrypt-proxy/wiki/Public-blocklists
     ## https://github.com/jedisct1/dnscrypt-proxy/tree/master/utils/generate-domains-blocklists
     echo "Install/Upgrade generate-domains-blocklist.py (requires python)"
-    mkdir -p "${SYNOPKG_PKGDEST}/var"
     touch "${SYNOPKG_PKGVAR}"/ip-blocklist.txt
     if [ ! -e "${SYNOPKG_PKGVAR}/domains-blocklist.conf" ]; then
         wget -t 3 -O "${SYNOPKG_PKGVAR}/domains-blocklist.conf" \
@@ -94,65 +75,6 @@ pgrep () {
         ps -w | grep "[^]]$1" >> "${LOG_FILE}" 2>&1
     fi
 }
-
-# restart_dhcpd () {
-#     /etc/rc.network nat-restart-dhcp >> "${LOG_FILE}" 2>&1
-# }
-
-# forward_dns_dhcpd () {
-#     echo "dns forwarding - $1" >> "${LOG_FILE}"
-#     if [ "$1" = "no" ] && [ -f /etc/dhcpd/dhcpd-dnscrypt-dnscrypt.conf ]; then
-#         if [ "$OS" = "dsm" ]; then
-#             echo "enable=no" > /etc/dhcpd/dhcpd-dns-dns.info
-#         else
-#             echo "enable=no" > /etc/dhcpd/dhcpd-dnscrypt-dnscrypt.info
-#         fi
-#         restart_dhcpd
-#     elif [ "$1" = "yes" ]; then
-#         if pgrep "dhcpd.conf"; then  # if dhcpd (dnsmasq) is enabled and running
-#             if [ "$OS" = "dsm" ]; then
-#                 echo "server=127.0.0.1#${BACKUP_PORT}" > /etc/dhcpd/dhcpd-dns-dns.conf
-#                 echo "enable=yes" > /etc/dhcpd/dhcpd-dns-dns.info
-#                 # /etc/dhcpd/dhcpd-vendor.conf
-#                 # /etc/dhcpd/dhcpd-dns-dns.conf
-#             else # RSM
-#                 echo "server=127.0.0.1#${BACKUP_PORT}" > /etc/dhcpd/dhcpd-dnscrypt-dnscrypt.conf
-#                 echo "enable=yes" > /etc/dhcpd/dhcpd-dnscrypt-dnscrypt.info
-#             fi
-#             restart_dhcpd
-#         else
-#             echo "pgrep: no process with 'dhcpd.conf' found" >> "${LOG_FILE}"
-#         fi
-#     fi
-# }
-
-# service_prestart () {
-#     if [ "$OS" = 'dsm' ] && [ "$SYNOPKG_DSM_VERSION_MAJOR" -lt 7 ] || [ "$OS" = 'srm' ]; then
-#         blocklist_cron_install
-
-#         forward_dns_dhcpd "yes"
-#         cd "$SVC_CWD" || exit 1
-
-#         # Limit num of processes https://golang.org/pkg/runtime/
-#         #
-#         # Fixes https://github.com/ksonnet/ksonnet/issues/298
-#         #  until https://github.com/golang/go/commit/3a18f0ecb5748488501c565e995ec12a29e66966
-#         #  is released.
-#         # related https://github.com/golang/go/issues/14626
-#         # https://github.com/golang/go/blob/release-branch.go1.11/src/os/user/lookup_stubs.go
-#         #
-#         # override community script from this point and launch the program ourselves
-#         env GOMAXPROCS=1 USER=root HOME=/root "${DNSCRYPT_PROXY}" --config "${CFG_FILE}" --pidfile "${PID_FILE}" &
-#         # su "${EFF_USER}" -s /bin/false -c "cd ${SVC_CWD}; ${DNSCRYPT_PROXY} --config ${CFG_FILE} --pidfile ${PID_FILE} --logfile ${LOG_FILE}" &
-#     fi
-# }
-
-# service_poststop () {
-#     if [ "$OS" = 'dsm' ] && [ "$SYNOPKG_DSM_VERSION_MAJOR" -lt 7 ] || [ "$OS" = 'srm' ]; then
-#         blocklist_cron_uninstall
-#         forward_dns_dhcpd "no"
-#     fi
-# }
 
 service_postinst () {
 
