@@ -24,54 +24,43 @@ default_config () {
         "${CFG_FILE}"
 }
 
-migrate_files () { # from 2.0.44 to 2.0.45
-    echo SYNOPKG_OLD_PKGVER=$SYNOPKG_OLD_PKGVER
-    # check if files where already migrated
-    if [ ! -f "${SYNOPKG_PKGVAR}/domains-blocklist.conf" ]; then
-        # Override config file since there are too many changes to use sed to upgrade them.
-        cp -f "${SYNOPKG_PKGDEST}/example-dnscrypt-proxy.toml" "$CFG_FILE"
-        default_config
-
-        if [ -f "${SYNOPKG_PKGVAR}/blacklist.txt" ]; then
-            mv "${SYNOPKG_PKGVAR}/blacklist.txt" "${SYNOPKG_PKGVAR}/blocked-names.txt"
-        fi
-        if [ -f "${SYNOPKG_PKGVAR}/domains-blacklist.conf" ]; then
-            mv "${SYNOPKG_PKGVAR}/domains-blacklist.conf" "${SYNOPKG_PKGVAR}/domains-blocklist.conf"
-        fi
-        if [ -f "${SYNOPKG_PKGVAR}/generate-domains-blacklist.py" ]; then
-            rm "${SYNOPKG_PKGVAR}/generate-domains-blacklist.py"
-        fi
-        if [ -f "${SYNOPKG_PKGVAR}/domains-blacklist-local-additions.txt" ]; then
-            mv "${SYNOPKG_PKGVAR}/domains-blacklist-local-additions.txt" "${SYNOPKG_PKGVAR}/domains-blocklist-local-additions.txt"
-        fi
-        if [ -f "${SYNOPKG_PKGVAR}/ip-blacklist.txt" ]; then
-            mv "${SYNOPKG_PKGVAR}/ip-blacklist.txt" "${SYNOPKG_PKGVAR}/blocked-ips.txt"
-        fi
-        if [ -f "${SYNOPKG_PKGVAR}/domains-whitelist.txt" ]; then
-            mv "${SYNOPKG_PKGVAR}/domains-whitelist.txt" "${SYNOPKG_PKGVAR}/allowed-names.txt"
-        fi
+migrate_files () { # from 2.0.44_5 to 2.0.45_6
+    # Override config file since there are too many changes to use sed to upgrade them.
+    cp -vf "${SYNOPKG_PKGDEST}/example-dnscrypt-proxy.toml" "$CFG_FILE"
+    default_config
+    if [ -f "${SYNOPKG_PKGVAR}/dnscrypt-proxy_install.log" ]; then
+        rm -vf "${SYNOPKG_PKGVAR}/dnscrypt-proxy_install.log"
     fi
-}
 
-blocklist_setup () {
-    ## https://github.com/jedisct1/dnscrypt-proxy/wiki/Public-blocklists
-    ## https://github.com/jedisct1/dnscrypt-proxy/tree/master/utils/generate-domains-blocklists
-    echo "Install/Upgrade generate-domains-blocklist.py (requires python)"
-    touch "${SYNOPKG_PKGVAR}/blocked-ips.txt"
-    if [ ! -e "${SYNOPKG_PKGVAR}/domains-blocklist.conf" ]; then
-        wget -t 3 -O "${SYNOPKG_PKGVAR}/domains-blocklist.conf" \
-            --https-only https://raw.githubusercontent.com/jedisct1/dnscrypt-proxy/master/utils/generate-domains-blocklist/domains-blocklist.conf
+    if [ -f "${SYNOPKG_PKGVAR}/blacklist.txt" ]; then
+        mv -v "${SYNOPKG_PKGVAR}/blacklist.txt" "${SYNOPKG_PKGVAR}/blocked-names.txt"
+    fi
+    if [ -f "${SYNOPKG_PKGVAR}/domains-blacklist.conf" ]; then
+        mv -v "${SYNOPKG_PKGVAR}/domains-blacklist.conf" "${SYNOPKG_PKGVAR}/domains-blocklist.conf"
+    fi
+    if [ -f "${SYNOPKG_PKGVAR}/generate-domains-blacklist.py" ]; then
+        rm -v "${SYNOPKG_PKGVAR}/generate-domains-blacklist.py"
+    fi
+    if [ -f "${SYNOPKG_PKGVAR}/domains-blacklist-local-additions.txt" ]; then
+        mv -v "${SYNOPKG_PKGVAR}/domains-blacklist-local-additions.txt" "${SYNOPKG_PKGVAR}/domains-blocklist-local-additions.txt"
+        sed -i -e 's|file:domains-blacklist-local-additions.txt|file:domains-blocklist-local-additions.txt|g' "${SYNOPKG_PKGVAR}/domains-blocklist-local-additions.txt"
+    fi
+    if [ -f "${SYNOPKG_PKGVAR}/ip-blacklist.txt" ]; then
+        mv -v "${SYNOPKG_PKGVAR}/ip-blacklist.txt" "${SYNOPKG_PKGVAR}/blocked-ips.txt"
+    fi
+    if [ -f "${SYNOPKG_PKGVAR}/domains-whitelist.txt" ]; then
+        mv -v "${SYNOPKG_PKGVAR}/domains-whitelist.txt" "${SYNOPKG_PKGVAR}/allowed-names.txt"
     fi
 }
 
 # blocklist_cron_uninstall () {
-#     # remove cron job
-#     if [ "$OS" = "dsm" ]; then
-#         rm -f /etc/cron.d/dnscrypt-proxy-update-blocklist
-#     else
-#         sed -i '/.*update-blocklist.sh/d' /etc/crontab
-#     fi
-#     synoservicectl --restart crond
+#      # remove cron job
+#      if [ "$OS" = "dsm" ]; then
+#          rm -f /etc/cron.d/dnscrypt-proxy-update-blocklist
+#      else
+#          sed -i '/.*update-blocklist.sh/d' /etc/crontab
+#      fi
+#      synoservicectl --restart crond
 # }
 
 # blocklist_cron_install () {
@@ -101,7 +90,6 @@ service_postinst () {
     if [ ! -e "${CFG_FILE}" ]; then
         # shellcheck disable=SC2086
         cp -f ${EXAMPLE_FILES} "${SYNOPKG_PKGVAR}/"
-        cp -f "${SYNOPKG_PKGDEST}"/offline-cache/* "${SYNOPKG_PKGVAR}/"
         cp -f "${SYNOPKG_PKGDEST}"/blocklist/* "${SYNOPKG_PKGVAR}/"
         # shellcheck disable=SC2231
         for file in ${SYNOPKG_PKGVAR}/example-*; do
@@ -110,7 +98,13 @@ service_postinst () {
         default_config
     fi
 
-    blocklist_setup
+    ## https://github.com/jedisct1/dnscrypt-proxy/wiki/Public-blocklists
+    ## https://github.com/jedisct1/dnscrypt-proxy/tree/master/utils/generate-domains-blocklists
+    touch "${SYNOPKG_PKGVAR}/blocked-ips.txt"
+    if [ ! -e "${SYNOPKG_PKGVAR}/domains-blocklist.conf" ]; then
+        wget -t 3 -O "${SYNOPKG_PKGVAR}/domains-blocklist.conf" \
+            --https-only https://raw.githubusercontent.com/jedisct1/dnscrypt-proxy/master/utils/generate-domains-blocklist/domains-blocklist.conf
+    fi
 
     # allow synocommuity group access (synoedit)
     chmod g+rw -R "$SYNOPKG_PKGVAR"
@@ -118,17 +112,19 @@ service_postinst () {
 
 service_postuninst () {
     if [ "$OS" = 'dsm' ] && [ "$SYNOPKG_DSM_VERSION_MAJOR" -lt 7 ] || [ "$OS" = 'srm' ]; then
-        blocklist_cron_uninstall
+        # remove cron job
+        if [ "$OS" = "dsm"  ] && [ -f /etc/cron.d/dnscrypt-proxy-update-blocklist ]; then
+            rm -f /etc/cron.d/dnscrypt-proxy-update-blocklist
+        else
+            sed -i '/.*update-blocklist.sh/d' /etc/crontab
+        fi
+        synoservicectl --restart crond
 
         # shellcheck disable=SC2129
-        echo "Uninstall Help files"
-        pkgindexer_del "${SYNOPKG_PKGDEST}/ui/helptoc.conf"
-        pkgindexer_del "${SYNOPKG_PKGDEST}/ui/index.conf"
-        disable_dhcpd_dns_port "no"
-        if [ "$OS" = "dsm" ]; then
+        if [ "$OS" = "dsm" ] && [ -f /etc/dhcpd/dhcpd-dns-dns.conf ]; then
             rm -f /etc/dhcpd/dhcpd-dns-dns.conf
             rm -f /etc/dhcpd/dhcpd-dns-dns.info
-        else
+        elif [ -f /etc/dhcpd/dhcpd-dnscrypt-dnscrypt.conf ]; then
             rm -f /etc/dhcpd/dhcpd-dnscrypt-dnscrypt.conf
             rm -f /etc/dhcpd/dhcpd-dnscrypt-dnscrypt.info
         fi
@@ -136,7 +132,14 @@ service_postuninst () {
 }
 
 service_postupgrade () {
-    migrate_files # from 2.0.44 to 2.0.45
-    # upgrade script
-    cp -f "${SYNOPKG_PKGDEST}/blocklist/generate-domains-blocklist.py" "${SYNOPKG_PKGVAR}/"
+    # from 2.0.44-5 to 2.0.45-6
+    OLD_PKG_REVISION="$(echo "${SYNOPKG_OLD_PKGVER}" | sed 's|[\.\_\-]| |g;s|\d||g' | awk '{print $NF}')"
+    echo SYNOPKG_OLD_PKGVER=$SYNOPKG_OLD_PKGVER
+    echo OLD_PKG_REVISION=$OLD_PKG_REVISION
+    if [ "${OLD_PKG_REVISION}" -lt "6" ]; then
+        echo "Migrating files from ${SYNOPKG_OLD_PKGVER} to 2.0.45_6..."
+        migrate_files
+    fi
+    # Upgrade generate-domains-blocklist.py script
+    cp -vf "${SYNOPKG_PKGDEST}/blocklist/generate-domains-blocklist.py" "${SYNOPKG_PKGVAR}/"
 }
