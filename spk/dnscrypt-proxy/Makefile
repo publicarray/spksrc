@@ -13,7 +13,6 @@ HELPURL = https://github.com/jedisct1/dnscrypt-proxy/wiki
 LICENSE = ISC
 CHANGELOG = "Update dnscrypt-proxy to 2.0.45"
 
-FWPORTS = src/${SPK_NAME}.sc
 SERVICE_USER = auto
 SERVICE_SETUP = src/service-setup.sh
 SERVICE_PORT = 10053
