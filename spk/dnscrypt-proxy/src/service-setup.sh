@@ -9,6 +9,14 @@ SYNOPKG_PKGHOME="${SYNOPKG_PKGHOME:=$SYNOPKG_PKGVAR}"
 SERVICE_COMMAND="env HOME=${SYNOPKG_PKGHOME} ${DNSCRYPT_PROXY} --config ${CFG_FILE} --pidfile ${PID_FILE}"
 SVC_BACKGROUND=y
 
+# find OS
+OS="dsm"
+if echo "$UNAME" | grep -q -i 'rt1900ac\|rt2600ac\|mr2200ac'; then
+    OS="srm"
+fi
+echo "OS detected: $OS"
+## end
+
 default_config () {
     # if [ servicetool --conf-port-conflict-check --tcp 53]
     sed -i -e "s/listen_addresses\s*=.*/listen_addresses = \['0.0.0.0:$SERVICE_PORT'\]/" \
@@ -31,7 +39,7 @@ migrate_files () { # from 2.0.44 to 2.0.45
             mv "${SYNOPKG_PKGVAR}/domains-blacklist.conf" "${SYNOPKG_PKGVAR}/domains-blocklist.conf"
         fi
         if [ -f "${SYNOPKG_PKGVAR}/generate-domains-blacklist.py" ]; then
-            mv "${SYNOPKG_PKGVAR}/generate-domains-blacklist.py" "${SYNOPKG_PKGVAR}/generate-domains-blocklist.py"
+            rm "${SYNOPKG_PKGVAR}/generate-domains-blacklist.py"
         fi
         if [ -f "${SYNOPKG_PKGVAR}/domains-blacklist-local-additions.txt" ]; then
             mv "${SYNOPKG_PKGVAR}/domains-blacklist-local-additions.txt" "${SYNOPKG_PKGVAR}/domains-blocklist-local-additions.txt"
@@ -100,13 +108,12 @@ service_postinst () {
             mv "${file}" "${file//example-/}"
         done
         default_config
-
-        # allow synocommuity group access (synoedit)
-        chmod g+rw -R "$SYNOPKG_PKGVAR"
-
     fi
 
     blocklist_setup
+
+    # allow synocommuity group access (synoedit)
+    chmod g+rw -R "$SYNOPKG_PKGVAR"
 }
 
 service_postuninst () {
@@ -131,5 +138,5 @@ service_postuninst () {
 service_postupgrade () {
     migrate_files # from 2.0.44 to 2.0.45
     # upgrade script
-    cp -f "${SYNOPKG_PKGDEST}"/blocklist/generate-domains-blocklist.py "${SYNOPKG_PKGVAR}/"
+    cp -f "${SYNOPKG_PKGDEST}/blocklist/generate-domains-blocklist.py" "${SYNOPKG_PKGVAR}/"
 }
