@@ -19,13 +19,13 @@ default_config () {
 migrate_files () { # from 2.0.44 to 2.0.45
     echo SYNOPKG_OLD_PKGVER=$SYNOPKG_OLD_PKGVER
     # check if files where already migrated
-    if [ ! -f "${SYNOPKG_PKGVAR}/domains-blocklist.txt" ]; then
+    if [ ! -f "${SYNOPKG_PKGVAR}/domains-blocklist.conf" ]; then
         # Override config file since there are too many changes to use sed to upgrade them.
         cp -f "${SYNOPKG_PKGDEST}/example-dnscrypt-proxy.toml" "$CFG_FILE"
         default_config
 
         if [ -f "${SYNOPKG_PKGVAR}/blacklist.txt" ]; then
-            mv "${SYNOPKG_PKGVAR}/blacklist.txt" "${SYNOPKG_PKGVAR}/domains-blocklist.txt"
+            mv "${SYNOPKG_PKGVAR}/blacklist.txt" "${SYNOPKG_PKGVAR}/blocked-names.txt"
         fi
         if [ -f "${SYNOPKG_PKGVAR}/domains-blacklist.conf" ]; then
             mv "${SYNOPKG_PKGVAR}/domains-blacklist.conf" "${SYNOPKG_PKGVAR}/domains-blocklist.conf"
