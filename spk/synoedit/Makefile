@@ -13,7 +13,8 @@ HELPURL = https://github.com/publicarray/synoedit
 LICENSE = "Synology package for editing files through a web interface using codemirror"
 CHANGELOG = "First release"
 
-STARTABLE=no
+STARTABLE = no
+SPK_GROUP = synocommunity
 DSM_UI_DIR = ui
 SERVICE_TYPE = legacy
 SERVICE_URL = /webman/3rdparty/synoedit/index.cgi
