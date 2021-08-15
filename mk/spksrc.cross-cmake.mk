@@ -38,14 +38,14 @@ cmake_configure_target:
 	@$(MSG)    - Path BUILD_DIR = $(CMAKE_BUILD_DIR)
 	$(RUN) rm -rf CMakeCache.txt CMakeFiles
 	$(RUN) mkdir --parents $(CMAKE_BUILD_DIR)
-	cd $(CMAKE_BUILD_DIR) && env $(ENV) cmake -j$(NCPUS) $(CMAKE_ARGS) $(WORK_DIR)/$(PKG_DIR)
+	cd $(CMAKE_BUILD_DIR) && env $(ENV) cmake -j$(NCPUS) -G "Ninja" $(CMAKE_ARGS) $(WORK_DIR)/$(PKG_DIR)
 
 .PHONY: cmake_compile_target
 
 # default compile:
 cmake_compile_target:
 	@$(MSG) - CMake compile
-	cd $(CMAKE_BUILD_DIR) && env $(ENV) $(MAKE) -j$(NCPUS)
+	cd $(CMAKE_BUILD_DIR) && env $(ENV) ninja
 
 .PHONY: cmake_install_target
 
@@ -53,10 +53,10 @@ cmake_compile_target:
 cmake_install_target:
 	@$(MSG) - CMake install
 ifeq ($(strip $(CMAKE_USE_DESTDIR)),0)
-	cd $(CMAKE_BUILD_DIR) && env $(ENV) $(MAKE) install
+	cd $(CMAKE_BUILD_DIR) && env $(ENV) ninja install
 endif
 ifeq ($(strip $(CMAKE_USE_DESTDIR)),1)
-	cd $(CMAKE_BUILD_DIR) && env $(ENV) $(MAKE) install DESTDIR=$(CMAKE_DESTDIR)
+	cd $(CMAKE_BUILD_DIR) && env $(ENV) DESTDIR=$(CMAKE_DESTDIR) ninja install
 endif
 
 # call-up regular build process
