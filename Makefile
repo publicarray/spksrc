@@ -13,11 +13,19 @@ all-noarch:
 	done
 
 
+clean-all: native-clean cross-clean spk-clean diyspk-clean package-manager-clean
+
 clean: $(addsuffix -clean,$(SUPPORTED_SPKS))
 clean: native-clean cross-clean
 
 dist-clean: clean
-dist-clean: kernel-clean toolchain-clean toolkit-clean
+dist-clean: kernel-clean toolchain-clean toolkit-clean package-manager-clean
+
+package-manager-clean:
+	rm -rf $(abspath distrib/pip)
+	rm -rf $(abspath distrib/go)
+	rm -rf $(abspath distrib/cargo)
+	rm -rf $(abspath distrib/nuget)
 
 native-clean:
 	@for native in $(dir $(wildcard native/*/Makefile)) ; \
@@ -53,6 +61,12 @@ spk-clean:
 	@for spk in $(dir $(wildcard spk/*/Makefile)) ; \
 	do \
 	    $(MAKE) -C $${spk} clean ; \
+	done
+
+diyspk-clean:
+	@for diyspk in $(dir $(wildcard diyspk/*/Makefile)) ; \
+	do \
+	    $(MAKE) -C $${diyspk} clean ; \
 	done
 
 %: spk/%/Makefile
