@@ -157,10 +157,6 @@
             "env_value": "http://{{wizard_plex_ip}}:32400"
           },
           {
-            "env_var": "ALLOWED_NETWORKS",
-            "env_value": "{{wizard_allowed_networks}}"
-          },
-          {
             "env_var": "PLEX_PASS",
             "env_value": "{{wizard_plex_pass}}"
           }
