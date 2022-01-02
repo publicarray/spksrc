@@ -12,7 +12,7 @@ SPK_DEPENDS = "python310>=3.10"
 DEPENDS += cross/libyaml
 
 # [Pillow]
-DEPENDS += cross/freetype cross/libjpeg cross/zlib
+BUILD_DEPENDS += cross/freetype cross/libjpeg cross/zlib
 WHEELS_BUILD_ARGS += [Pillow]
 WHEELS_BUILD_ARGS += build_ext
 WHEELS_BUILD_ARGS += --disable-platform-guessing

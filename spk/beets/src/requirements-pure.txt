@@ -9,7 +9,6 @@ mediafile>=0.2.0
 munkres>=1.0.0
 musicbrainzngs>=0.4
 mutagen>=1.45
-six>=1.9
 Unidecode
 
 # Plugin dependencies
@@ -37,10 +36,3 @@ Flask-Cors==3.0.10
 itsdangerous==2.0.1
 Jinja2==3.0.2
 Werkzeug==2.0.2
-
-# For gmusic plugin
-# Despite installing following wheels 'google' is not found at runtime
-# future==0.18.2
-# gmusicapi==12.1.1
-# decorator==4.4.2
-# google==2.0.3
