@@ -21,7 +21,7 @@ COMPILE_TARGET = navidrome_compile_target
 GO_BIN_DIR = $(WORK_DIR)/$(PKG_DIR)/$(PKG_NAME)
 include ../../mk/spksrc.cross-go.mk
 
-ENV += LDFLAGS=""
+ENV += LDFLAGS="-X 'main.Version=v$(PKG_VERS)'"
 
 navidrome_compile_target:
 	$(RUN) $(MAKE) setup
