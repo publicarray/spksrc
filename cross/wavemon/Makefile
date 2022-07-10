@@ -14,4 +14,10 @@ LICENSE  = GPL-3.0
 ADDITIONAL_CPPFLAGS = -std=c99
 GNU_CONFIGURE = 1
 
+PRE_CONFIGURE_TARGET = wavemon_pre_configure_target
+
 include ../../mk/spksrc.cross-cc.mk
+
+.PHONY: wavemon_pre_configure_target
+wavemon_pre_configure_target:
+	$(RUN) autoconf ./Makefile.in
