@@ -1,0 +1,19 @@
+From: Helmut Grohne <helmut@subdivi.de>
+Subject: honour the CC variable from configure
+
+A ?= assignment to CC is a noop, because CC has a make default of "cc". This
+breaks e.g. cross compilation.
+
+Index: Makefile.in
+===================================================================
+--- Makefile.in
++++ Makefile.in
+@@ -8,7 +8,7 @@
+ exec_perms  = 0755
+ install-suid-root: exec_perms = 4755
+
+-CC	 ?= @CC@
++CC	  = @CC@
+ CFLAGS	 ?= @CFLAGS@ @LIBNL3_CLI_CFLAGS@
+ CPPFLAGS ?= @CPPFLAGS@
+ LDFLAGS  ?= @LDFLAGS@
