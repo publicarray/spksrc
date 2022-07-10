@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 		curl \
 		cython \
 		debootstrap \
+		debuerreotype \
 		ed \
 		expect \
 		fakeroot \
