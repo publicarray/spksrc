@@ -58,5 +58,6 @@ SPK_COMMANDS += bin/etherwake
 SPK_COMMANDS += bin/telnet bin/whois
 SPK_COMMANDS += bin/arpaname bin/delv bin/dig bin/mdig
 SPK_COMMANDS += bin/aria2c
+SPK_COMMANDS += bin/wavmon
 
 include ../../mk/spksrc.spk.mk
