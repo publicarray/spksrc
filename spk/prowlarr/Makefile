@@ -1,6 +1,7 @@
-SPK_NAME = prowlarr_official
-SPK_CONFLICT = prowlarr
-SPK_VERS = 0.3.0.1730
+SPK_NAME = prowlarr
+SPK_CONFLICT = prowlarr_official
+SPK_VERS = $(shell date +%Y%m%d)
+SPK_REV = 2
 SPK_ICON = src/prowlarr.png
 
 REQUIRED_MIN_DSM = 6.0

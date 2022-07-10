@@ -1,6 +1,7 @@
-SPK_NAME = sonarr_servarr
-SPK_CONFLICT = nzbdrone
-SPK_VERS = 3.0.8.1507
+SPK_NAME = nzbdrone
+SPK_CONFLICT = sonarr_servarr
+SPK_VERS = $(shell date +%Y%m%d)
+SPK_REV = 20
 SPK_ICON = src/sonarr.png
 
 REQUIRED_MIN_DSM = 6.0

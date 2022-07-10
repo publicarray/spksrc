@@ -1,6 +1,7 @@
-SPK_NAME = lidarr_official
-SPK_CONFLICT = lidarr
-SPK_VERS = 1.0.0.2570
+SPK_NAME = lidarr
+SPK_CONFLICT = lidarr_official
+SPK_VERS = $(shell date +%Y%m%d)
+SPK_REV = 8
 SPK_ICON = src/lidarr.png
 
 REQUIRED_MIN_DSM = 6.0

@@ -1,5 +1,5 @@
-SPK_NAME = readarr_official
-SPK_CONFLICT = readarr
+SPK_NAME = readarr
+SPK_CONFLICT = readarr_official
 SPK_VERS = 0.1.0.1248
 SPK_ICON = src/readarr.png
 
