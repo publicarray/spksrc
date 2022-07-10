@@ -1,5 +1,5 @@
 PKG_NAME = Radarr
-PKG_VERS = 3.2.2.5080
+PKG_VERS = 4.1.0.6175
 PKG_EXT = tar.gz
 PKG_DIST_NAME = $(PKG_NAME).master.$(PKG_VERS).linux-core-$(PKG_DIST_ARCH).$(PKG_EXT)
 PKG_DIST_SITE = https://github.com/Radarr/Radarr/releases/download/v$(PKG_VERS)
@@ -31,5 +31,5 @@ include ../../mk/spksrc.install-resources.mk
 .PHONY: radarr_install
 radarr_install:
 	rm -rf $(WORK_DIR)/$(PKG_DIR)/Radarr.Update
-	mkdir -p $(STAGING_INSTALL_PREFIX)/share/$(PKG_DIR)/bin
-	tar -cf - -C $(WORK_DIR)/$(PKG_DIR) . | tar -xf - -C $(STAGING_INSTALL_PREFIX)/share/$(PKG_DIR)/bin
+	mkdir -p $(STAGING_INSTALL_PREFIX)/usr/lib/radarr/bin
+	tar -cf - -C $(WORK_DIR)/$(PKG_NAME) . | tar -xf - -C $(STAGING_INSTALL_PREFIX)/usr/lib/radarr/bin

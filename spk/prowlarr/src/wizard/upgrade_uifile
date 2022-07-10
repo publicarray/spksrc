@@ -3,4 +3,11 @@
     "items": [{
         "desc": "Keep Prowlarr up-to-date by using Prowlarr's built-in updater.<br>Navigate to System>Updates in the Prowlarr UI."
     }]
+}, {
+    "step_title": "DSM Permissions",
+    "items": [{
+        "desc": "Permissions for all download-related packages are managed with the group <b>'sc-download'</b> in DSM."
+    },{
+        "desc": "<strong style='color:red'>NOTE:</strong> The package upgrade will try to set the correct permissions on your folders. If you get permission errors within Radarr, manually set Read/Write permissions for the 'sc-download' group on the reported folders using File Station."
+    }]
 }]

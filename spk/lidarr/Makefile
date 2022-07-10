@@ -1,28 +1,28 @@
-SPK_NAME = lidarr
-SPK_VERS = $(shell date +%Y%m%d)
-SPK_REV = 7
+SPK_NAME = lidarr_official
+SPK_CONFLICT = lidarr
+SPK_VERS = 1.0.0.2570
 SPK_ICON = src/lidarr.png
+
+REQUIRED_MIN_DSM = 6.0
+
+# .NET is not supported on PPC, ARM5, ARM7L and x86
+UNSUPPORTED_ARCHS = $(PPC_ARCHS) $(ARMv5_ARCHS) $(ARMv7L_ARCHS)
+
+DEPENDS = cross/lidarr
 
 MAINTAINER = Team Lidarr
 MAINTAINER_URL = https://lidarr.audio/
-DESCRIPTION  = Lidarr is a music collection manager for Usenet and BitTorrent users. It can monitor multiple RSS feeds for new tracks from your favorite artists and will grab, sort and rename them. It can also be configured to automatically upgrade the quality of files already downloaded when a better quality format becomes available.
-CHANGELOG = "Update Lidarr to .NET"
-DISPLAY_NAME = Lidarr
-HOMEPAGE = https://lidarr.audio/
-LICENSE  = GPLv3
-LICENSE_FILE = $(WORK_DIR)/Lidarr/LICENSE.md
-HELPURL = https://wiki.servarr.com/Lidarr_Troubleshooting
+HELPURL    = https://wiki.servarr.com/Lidarr
 SUPPORTURL = https://lidarr.audio/\#support
 
-REQUIRED_MIN_DSM = 5.0
-
-# Mono not supported on ppc platforms. C.f. cross/mono/Makefile and references therein for details.
-UNSUPPORTED_ARCHS = $(PPC_ARCHS)
-
-OPTIONAL_DEPENDS = cross/libstdc++ cross/$(SPK_NAME) cross/$(SPK_NAME)-mono
-DEPENDS = cross/sqlite 
-
+DESCRIPTION  = Lidarr is a music collection manager for Usenet and BitTorrent users. It can monitor multiple RSS feeds for new tracks from your favorite artists and will grab, sort and rename them. It can also be configured to automatically upgrade the quality of files already downloaded when a better quality format becomes available.
 STARTABLE = yes
+DISPLAY_NAME = Lidarr
+CHANGELOG = "${DISPLAY_NAME} v$(SPK_VERS)"
+
+HOMEPAGE = $(MAINTAINER_URL)
+LICENSE  = GPLv3
+
 SERVICE_USER = auto
 SERVICE_SETUP = src/service-setup.sh
 SERVICE_PORT = 8686
@@ -33,26 +33,36 @@ ADMIN_PORT = $(SERVICE_PORT)
 
 WIZARDS_DIR = src/wizard/
 
-# Mono build for unsupported .NET archs
-include ../../mk/spksrc.archs.mk
-ifeq ($(findstring $(ARCH),$(ARMv5_ARCHS) $(i686_ARCHS) $(ARMv7L_ARCHS)),$(ARCH))
-DEPENDS += cross/$(SPK_NAME)-mono
-SERVICE_SETUP = src/service-setup-mono.sh
-CHANGELOG = "no change"
-SPK_DEPENDS = "mono>3.6:chromaprint>=1.5"
-else
-DEPENDS += cross/libstdc++ cross/$(SPK_NAME)
-endif
+POST_STRIP_TARGET = app_extra_install
 
-POST_STRIP_TARGET = lidarr_extra_install
+# DSM prevents executing from /tmp in 7.1
+USE_ALTERNATE_TMPDIR = 1
+
+include ../../mk/spksrc.common.mk
+
+ifeq ($(call version_lt, ${TCVERSION}, 7.0),1)
+DEPENDS += cross/bubblewrap cross/debian-buster
+app_extra_install: rootfs_install
+else ifeq ($(ARCH), comcerto2k)
+DEPENDS += cross/debian-buster
+SPK_DEPENDS = "bubblewrap>=0.6.1"
+app_extra_install: rootfs_install
+else
+DEPENDS += cross/sqlite cross/lidarr
+endif
 
 include ../../mk/spksrc.spk.mk
 
-PACKAGE_VERSION = $(SPK_NAME_ARCH)-$(SPK_TCVERS)_$(SPK_VERS)-$(SPK_REV)
-PACKAGE_AUTHOR = [Team Lidarr](https://lidarr.audio/)
+PACKAGE_VERSION = $(SPK_VERS)-spk$(SPK_REV)-$(SPK_NAME_ARCH)-$(SPK_TCVERS)
+PACKAGE_AUTHOR = [$(MAINTAINER)]($(MAINTAINER_URL))
 
-.PHONY: lidarr_extra_install
-lidarr_extra_install:
-	install -m 755 -d $(STAGING_DIR)/app
-	install -m 644 src/config.xml $(STAGING_DIR)/app/config.xml
-	@echo "PackageVersion=$(PACKAGE_VERSION)\nPackageAuthor=$(PACKAGE_AUTHOR)" > $(STAGING_DIR)/share/Lidarr/package_info
+.PHONY: app_extra_install rootfs_install
+
+rootfs_install:
+	sudo debuerreotype-apt-get $(STAGING_DIR)/rootfs update; \
+	sudo debuerreotype-apt-get $(STAGING_DIR)/rootfs install -y --no-install-recommends --no-install-suggests ca-certificates locales tzdata libicu63 libssl1.1 libstdc++6 zlib1g libsqlite3-0; \
+	rm -rf $(STAGING_DIR)/tmp/* $(STAGING_DIR)/var/lib/apt/lists/* $(STAGING_DIR)/var/tmp/*; \
+
+app_extra_install:
+	@install -m 755 -d $(STAGING_DIR)/app
+	@echo "PackageVersion=$(PACKAGE_VERSION)\nPackageAuthor=$(PACKAGE_AUTHOR)" > $(STAGING_DIR)/usr/lib/lidarr/package_info

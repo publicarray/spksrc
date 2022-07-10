@@ -1,0 +1,6 @@
+[{
+    "step_title": "Manual configuration required!",
+    "items": [{
+        "desc": "This package, and any packages that depend on it, <b>will not work</b> until you perform the manual steps explained <a target=\"_blank\" href=\"https://wiki.servarr.com/en/synology-packages#bubblewrap-installation-on-dsm-7\">here</a>."
+    }]
+}]

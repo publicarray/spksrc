@@ -63,7 +63,7 @@ install_msg_target:
 $(PRE_INSTALL_PLIST):
 	$(create_target_dir)
 	@mkdir -p $(INSTALL_DIR)/$(INSTALL_PREFIX) $(INSTALL_DIR)/$(INSTALL_PREFIX_VAR)
-	find $(PLIST_SEARCH_PATH) \! -type d -printf '%P\n' | sed 's?^target/??g' | sort > $@
+	find $(PLIST_SEARCH_PATH) -printf '%P\n' | sed 's?^target/??g' | sort > $@
 
 pre_install_target: install_msg_target $(PRE_INSTALL_PLIST)
 
@@ -73,7 +73,8 @@ install_target: $(PRE_INSTALL_TARGET)
 post_install_target: $(INSTALL_TARGET)
 
 $(INSTALL_PLIST):
-	find $(PLIST_SEARCH_PATH)/ \! -type d -printf '%P\n' | sed 's?^target/??g' | sort | \
+	@echo Creating standard plist
+	find $(PLIST_SEARCH_PATH)/ -printf '%P\n' | sed 's?^target/??g' | sort | \
 	  diff $(PRE_INSTALL_PLIST) -  | grep '>' | sed 's?> ??g' > $@
 
 install_correct_lib_files: $(INSTALL_PLIST)

@@ -1,48 +1,57 @@
-LIDARR="${SYNOPKG_PKGDEST}/share/Lidarr/bin/Lidarr"
-
-# Lidarr uses custom Config and PID directories
-HOME_DIR="${SYNOPKG_PKGVAR}"
-CONFIG_DIR="${SYNOPKG_PKGVAR}/.config"
-PID_FILE="${CONFIG_DIR}/Lidarr/lidarr.pid"
-
-# Some have it stored in the root of package
-LEGACY_CONFIG_DIR="${SYNOPKG_PKGDEST}/.config"
+APP_LOWER="lidarr"
+APP_UPPER="Lidarr"
 
 GROUP="sc-download"
 
-SERVICE_COMMAND="env HOME=${HOME_DIR} LD_LIBRARY_PATH=${SYNOPKG_PKGDEST}/lib ${LIDARR}"
+USR_LIB="/usr/lib/${APP_LOWER}"
+PID_FILE="${SYNOPKG_PKGVAR}/${APP_LOWER}.pid"
+
+# If the bwrap binary is in this package, use it, otherwise use from standalone package.
+BWRAP="${SYNOPKG_PKGDEST}/bin/bwrap"
+if [ ! -f "${BWRAP}" ]; then
+    BWRAP="/var/packages/bubblewrap/target/bin/bwrap"
+fi
+
+# Some versions include a rootfs to create a chroot container with newer libraries.
+ROOTFS="${SYNOPKG_PKGDEST}/rootfs"
+if [ -d "${ROOTFS}" ]; then
+    APP="${USR_LIB}/bin/${APP_UPPER}"
+    CONFIG_DIR="/var/lib/${APP_LOWER}"
+    VOLUMES=$(mount -l | grep -E '/volume([0-9]{1,2}\b|USB[0-9]{1,2}/)' | awk '{ printf " --bind %s %s", $3, $3 }' | sort -V)
+
+    SERVICE_COMMAND="${BWRAP} --bind ${ROOTFS} / --proc /proc --dev /dev --ro-bind /etc/resolv.conf /etc/resolv.conf --bind ${SYNOPKG_PKGDEST}${USR_LIB} ${USR_LIB} --bind ${SYNOPKG_PKGVAR} ${CONFIG_DIR} ${VOLUMES} --share-net --setenv HOME ${SYNOPKG_PKGVAR} ${APP} --nobrowser --data=${CONFIG_DIR}"
+else
+    APP="${SYNOPKG_PKGDEST}${USR_LIB}/bin/${APP_UPPER}"
+    SERVICE_COMMAND="env HOME=${SYNOPKG_PKGVAR} LD_LIBRARY_PATH=${SYNOPKG_PKGDEST}/lib ${APP} --nobrowser --data=${SYNOPKG_PKGVAR}"
+fi
+
 SVC_BACKGROUND=y
+
+fix_permissions ()
+{
+    if [ ${SYNOPKG_DSM_VERSION_MAJOR} -lt 7 ]; then
+        if [ -f "${BWRAP}" ]; then
+            chown root:root "${BWRAP}"
+            chmod u+s "${BWRAP}"
+        fi
+
+        set_unix_permissions "${SYNOPKG_PKGVAR}"
+    fi
+}
 
 service_postinst ()
 {
     # Move config.xml to .config
-    mkdir -p ${CONFIG_DIR}/Lidarr
-    mv ${SYNOPKG_PKGDEST}/app/config.xml ${CONFIG_DIR}/Lidarr/config.xml
-    set_unix_permissions "${CONFIG_DIR}"
-}
+    mv ${SYNOPKG_PKGDEST}/app/config.xml ${SYNOPKG_PKGVAR}
 
-service_preupgrade ()
-{
-    # We have to account for legacy folder in the root
-    # It should go, after the upgrade, into /var/.config/
-    # The /var/ folder gets automatically copied by service-installer after this
-    if [ -d "${LEGACY_CONFIG_DIR}" ]; then
-        echo "Moving ${LEGACY_CONFIG_DIR} to ${SYNOPKG_PKGVAR}"
-        mv ${LEGACY_CONFIG_DIR} ${SYNOPKG_PKGVAR}
-    fi
-
-    if [ ! -d "${CONFIG_DIR}" ]; then
-        # Create, in case it's missing for some reason
-        mkdir -p ${CONFIG_DIR}
-    fi
-
+    fix_permissions
 }
 
 service_postupgrade ()
 {
-    # Make Lidarr do an update check on start to avoid possible Lidarr
+    # Do an update check on start to avoid possible
     # downgrade when synocommunity package is updated
-    touch ${CONFIG_DIR}/Lidarr/update_required
+    touch ${SYNOPKG_PKGVAR}/update_required
 
-    set_unix_permissions "${CONFIG_DIR}"
+    fix_permissions
 }

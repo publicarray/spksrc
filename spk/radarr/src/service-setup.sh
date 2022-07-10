@@ -1,64 +1,57 @@
+APP_LOWER="radarr"
+APP_UPPER="Radarr"
 
-# Radarr service setup
-RADARR="${SYNOPKG_PKGDEST}/share/Radarr/bin/Radarr"
-
-# Radarr uses custom Config and PID directories
-HOME_DIR="${SYNOPKG_PKGVAR}"
-CONFIG_DIR="${HOME_DIR}/.config"
-RADARR_CONFIG_DIR="${CONFIG_DIR}/Radarr"
-PID_FILE="${RADARR_CONFIG_DIR}/radarr.pid"
-
-# SPK_REV 15 has it in the wrong place for DSM 7
-LEGACY_CONFIG_DIR="${SYNOPKG_PKGDEST}/var/.config"
-
-# for DSM < 7 only:
 GROUP="sc-download"
 
-SERVICE_COMMAND="env HOME=${HOME_DIR} LD_LIBRARY_PATH=${SYNOPKG_PKGDEST}/lib ${RADARR} -nobrowser -data=${RADARR_CONFIG_DIR}"
+USR_LIB="/usr/lib/${APP_LOWER}"
+PID_FILE="${SYNOPKG_PKGVAR}/${APP_LOWER}.pid"
+
+# If the bwrap binary is in this package, use it, otherwise use from standalone package.
+BWRAP="${SYNOPKG_PKGDEST}/bin/bwrap"
+if [ ! -f "${BWRAP}" ]; then
+    BWRAP="/var/packages/bubblewrap/target/bin/bwrap"
+fi
+
+# Some versions include a rootfs to create a chroot container with newer libraries.
+ROOTFS="${SYNOPKG_PKGDEST}/rootfs"
+if [ -d "${ROOTFS}" ]; then
+    APP="${USR_LIB}/bin/${APP_UPPER}"
+    CONFIG_DIR="/var/lib/${APP_LOWER}"
+    VOLUMES=$(mount -l | grep -E '/volume([0-9]{1,2}\b|USB[0-9]{1,2}/)' | awk '{ printf " --bind %s %s", $3, $3 }' | sort -V)
+
+    SERVICE_COMMAND="${BWRAP} --bind ${ROOTFS} / --proc /proc --dev /dev --ro-bind /etc/resolv.conf /etc/resolv.conf --bind ${SYNOPKG_PKGDEST}${USR_LIB} ${USR_LIB} --bind ${SYNOPKG_PKGVAR} ${CONFIG_DIR} ${VOLUMES} --share-net --setenv HOME ${SYNOPKG_PKGVAR} ${APP} --nobrowser --data=${CONFIG_DIR}"
+else
+    APP="${SYNOPKG_PKGDEST}${USR_LIB}/bin/${APP_UPPER}"
+    SERVICE_COMMAND="env HOME=${SYNOPKG_PKGVAR} LD_LIBRARY_PATH=${SYNOPKG_PKGDEST}/lib ${APP} --nobrowser --data=${SYNOPKG_PKGVAR}"
+fi
+
 SVC_BACKGROUND=y
+
+fix_permissions ()
+{
+    if [ ${SYNOPKG_DSM_VERSION_MAJOR} -lt 7 ]; then
+        if [ -f "${BWRAP}" ]; then
+            chown root:root "${BWRAP}"
+            chmod u+s "${BWRAP}"
+        fi
+
+        set_unix_permissions "${SYNOPKG_PKGVAR}"
+    fi
+}
 
 service_postinst ()
 {
     # Move config.xml to .config
-    mkdir -p ${RADARR_CONFIG_DIR}
-    mv ${SYNOPKG_PKGDEST}/app/config.xml ${RADARR_CONFIG_DIR}/config.xml
+    mv ${SYNOPKG_PKGDEST}/app/config.xml ${SYNOPKG_PKGVAR}
 
-    echo "Set update required"
-    # Make Radarr do an update check on start to avoid possible Radarr
-    # downgrade when synocommunity package is updated
-    touch ${RADARR_CONFIG_DIR}/update_required 2>&1
-
-    if [ ${SYNOPKG_DSM_VERSION_MAJOR} -lt 7 ]; then
-        set_unix_permissions "${CONFIG_DIR}"
-    fi
-}
-
-service_preupgrade ()
-{
-    if [ ${SYNOPKG_DSM_VERSION_MAJOR} -ge 7 ]; then
-        # ensure config is in @appdata folder
-        if [ -d "${LEGACY_CONFIG_DIR}" ]; then
-            if [ "$(realpath ${LEGACY_CONFIG_DIR})" != "$(realpath ${CONFIG_DIR})" ]; then
-                echo "Move ${LEGACY_CONFIG_DIR} to ${CONFIG_DIR}"
-                mv ${LEGACY_CONFIG_DIR} ${CONFIG_DIR} 2>&1
-            fi
-        fi
-    fi
-
-    ## never update Radarr distribution, use internal updater only
-    [ -d ${SYNOPKG_TEMP_UPGRADE_FOLDER}/backup ] && rm -rf ${SYNOPKG_TEMP_UPGRADE_FOLDER}/backup
-    echo "Backup existing distribution to ${SYNOPKG_TEMP_UPGRADE_FOLDER}/backup"
-    mkdir -p ${SYNOPKG_TEMP_UPGRADE_FOLDER}/backup 2>&1
-    rsync -aX ${SYNOPKG_PKGDEST}/share ${SYNOPKG_TEMP_UPGRADE_FOLDER}/backup/ 2>&1
+    fix_permissions
 }
 
 service_postupgrade ()
 {
-    ## restore Radarr distribution
-    if [ -d ${SYNOPKG_TEMP_UPGRADE_FOLDER}/backup/share ]; then
-        echo "Restore previous distribution from ${SYNOPKG_TEMP_UPGRADE_FOLDER}/backup"
-        rm -rf ${SYNOPKG_PKGDEST}/share/Radarr/bin 2>&1
-        # prevent overwrite of updated package_info
-        rsync -aX --exclude=package_info ${SYNOPKG_TEMP_UPGRADE_FOLDER}/backup/share/ ${SYNOPKG_PKGDEST}/share 2>&1
-    fi
+    # Do an update check on start to avoid possible
+    # downgrade when synocommunity package is updated
+    touch ${SYNOPKG_PKGVAR}/update_required
+
+    fix_permissions
 }
