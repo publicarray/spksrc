@@ -8,6 +8,7 @@ DEPENDS += cross/rsync cross/autossh cross/arp-scan
 DEPENDS += cross/mtr
 DEPENDS += cross/etherwake
 DEPENDS += cross/inetutils
+DEPENDS += cross/wavemon
 
 OPTIONAL_DEPENDS = cross/sshfs cross/ser2net cross/bind cross/aria2
 
@@ -19,7 +20,7 @@ ifneq ($(findstring $(ARCH),$(OLD_PPC_ARCHS)),$(ARCH))
 DEPENDS += cross/bind
 OPTIONAL_DESC := $(OPTIONAL_DESC)", arpaname, delv, dig, mdig"
 DEPENDS += cross/ser2net
-DEPENDS += cross/sshfs 
+DEPENDS += cross/sshfs
 OPTIONAL_DESC := $(OPTIONAL_DESC)", sshfs, ser2net"
 endif
 

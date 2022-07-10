@@ -1,0 +1,17 @@
+bin:bin/nf-*
+bin:bin/nl-*
+lib:lib/libnl-3.so
+lib:lib/libnl-3.so.200
+lib:lib/libnl-3.so.200.26.0
+lib:lib/libnl-cli-3.so
+lib:lib/libnl-cli-3.so.200
+lib:lib/libnl-cli-3.so.200.26.0
+lib:lib/libnl-genl-3.so
+lib:lib/libnl-genl-3.so.200
+lib:lib/libnl-genl-3.so.200.26.0
+lib:lib/libnl-route-3.so
+lib:lib/libnl-route-3.so.200
+lib:lib/libnl-route-3.so.200.26.0
+lib:lib/libnl-xfrm-3.so
+lib:lib/libnl-xfrm-3.so.200
+lib:lib/libnl-xfrm-3.so.200.26.0
